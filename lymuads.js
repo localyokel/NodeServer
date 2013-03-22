@@ -7,6 +7,7 @@ function lym_ads_makeFrame() {
    var lym_adsvr_div_id = "adsvr_"+localyokel_adsvr_adspace_id+"_"+Math.floor(Math.random()*999);
    document.write('<form id="lym_adsvr_makeFrame"><div id="'+ lym_adsvr_div_id +'"></div></form>');     
    var localyokel_refURL; if(self == top) localyokel_refURL = document.location.href; else localyokel_refURL = document.referrer;
+   localyokel_refURL = 'http://test.localyokelmedia.com/this/is/a/test/ad.html';
    var localyokel_width = lym_adsvr_SplitOnString(0);
    var localyokel_height = lym_adsvr_SplitOnString(1);
    ifrm = document.createElement("IFRAME"); 

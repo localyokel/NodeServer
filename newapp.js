@@ -154,6 +154,9 @@ if ( cluster.isMaster ) {
 		  //now check for leading www and take it out
 		  var nhost = host.replace(/^www\.(.*?)/im,"$1");
 		  if (nhost) host=nhost;
+		  var phost = host;
+		  host = host.replace(/^([A-Za-z0-9\.\-]).*$/im,"$1");
+		  console.log('PHOST:' + phost + ' HOST:' + host);
 		  //now we have the host...will have to change this later on for dnainfo
   	    }
       } else {
@@ -164,7 +167,7 @@ if ( cluster.isMaster ) {
   	  // if everything is good we process the request
 	  if (host != 'none' && garbage == 0) {
 		console.log('app.get:Found ' + host + ' in ' + referrer);
-		var node = host + '/' + aid + '/' + size + '/' + adpos;
+		var node = host + ':' + aid + ':' + size + ':' + adpos;
 		//console.log('app.get:'+node);
 		//connection goes to memcache...
 		if (connection) {
@@ -212,36 +215,36 @@ if ( cluster.isMaster ) {
 						res.end(new_adtag);
 					  } else {
 					  	console.log('app.get:Not found in MySQL...checking for Passback');
-					  	query = 'SELECT ad FROM passbacks WHERE pb_id = \'' + pb_id;
+					  	query = 'SELECT ad FROM passbacks WHERE pb_id = \'' + pb_id + '\'';
 					  	mysqlc.query(query,function(err,rows,fields) {
 					  		if (err) {
-					  			res.writeHead(200,{'Content-type':'text/html'});
-					  			res.end();
-					  		} elsif (rows[0]) {
-					  			var tag = rows[0];
-					  			connection.set(pb_id,tag.ad,function(result) {
-					  				if (result.success) {
-					  					console.log('app.get:Added passback to memcached');
-					  				} else {
-					  					console.log('app.get:Couldn\'t add passback to memcached');
-					  				}
-					  			});
-					  			res.writeHead(200,{'Content-type':'text/html'});
-					  			res.end(tag.ad);
-					  		}
-					  	}); // end of mysql.query for passback
-					  }  // end of if err for mysql query
-					}); // end of mysql.query for tag
+					  		  res.writeHead(200,{'Content-type':'text/html'});
+					  		  res.end();
+					  		} else if (rows[0]) {
+				  			  var tag = rows[0];
+				  			  connection.set(pb_id,tag.ad,function(result) {
+				  				if (result.success) {
+				  					console.log('app.get:Added passback to memcached');
+				  				} else {
+				  					console.log('app.get:Couldn\'t add passback to memcached');
+				  				}
+				  			  }); // end connection.set
+				  			  res.writeHead(200,{'Content-type':'text/html'});
+				  			  res.end(tag.ad);
+					  		}     // end if err
+					  	});       // end of mysql.query for passback
+					  }           // end of if err for mysql query
+					});           // end of mysql.query for tag
 				  } else {
 				  	//write header and empty response
 					console.log('app.get:No MySQL Connection available');
 					res.writeHead(200,{'Content-type':'text/html'});
 					res.end();
 				  } // end if mysqlc
-			  	} // end if result.success for pb_id in memcached
-			  });
-			} // end of result.success
-		  }); // end of connection.get
+			  	}   // end if result.success for pb_id in memcached
+			  });   // end connection get pb_id
+			} 		// end of result.success
+		  }); 		// end of connection.get
 		} else {
 		  console.log('app.get:No Memcached connection');
 		  res.writeHead(200,{'Content-type':'text/html'});
