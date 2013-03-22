@@ -3,7 +3,7 @@
 lym_ads_makeFrame();
 
 function lym_ads_makeFrame() {
-   var localyokel_adsvr_adspace_vAppRoot = "http://ec2-54-242-206-21.compute-1.amazonaws.com:8080/a";
+   var localyokel_adsvr_adspace_vAppRoot = "http://NodeBalancer-2000449350.us-west-1.elb.amazonaws.com/a";
    var lym_adsvr_div_id = "adsvr_"+localyokel_adsvr_adspace_id+"_"+Math.floor(Math.random()*999);
    document.write('<form id="lym_adsvr_makeFrame"><div id="'+ lym_adsvr_div_id +'"></div></form>');     
    var localyokel_refURL; if(self == top) localyokel_refURL = document.location.href; else localyokel_refURL = document.referrer;

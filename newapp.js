@@ -57,6 +57,40 @@ if ( cluster.isMaster ) {
 	});
 	mysqlc.connect();
 
+	function get_default(size) {
+		var def_id = size;
+		connection.get(def_id,function(result) {
+			if (result.success && result.data) {
+				return result.data;  
+			} else {
+				if(mysqlc) {
+					query = 'SELECT ad FROM passbacks WHERE pb_id = \'' + def_id + '\'';
+					mysqlc.query(query,function(err,rows,fields) {
+						if (err) {
+						  console.log('Error from MySQL while searching for default creative');
+						  return;
+						} else if (rows[0]) {
+						  connection.set(def_id,rows[0].ad,function(result) {
+				  			if (result.success) {
+				  			  console.log('app.get:Added default creative to memcached');
+				  			} else {
+				  			  console.log('app.get:Couldn\'t add default creative to memcached');
+				  			}
+				  		  });
+						  return rows[0].ad;
+						} else {
+						  console.log('No default creative found for ' + def_id);
+						  return;
+						}
+					});
+				} else {
+					console.log('No MySQL connection established when finding default creative');
+					return;
+				}
+			}
+		});
+	}
+
 	function modify_tag(adtag,keys) {
 		var new_adtag = adtag;
 		if (keys != 'NA') {
@@ -133,6 +167,7 @@ if ( cluster.isMaster ) {
 	  	adpos = 'atf';
 	  	garbage = 1;
 	  }
+	  keys = adpos;
 
 	  // aid is the ad id and is only numeric
 	  var aid = req.query.aid;
@@ -147,7 +182,7 @@ if ( cluster.isMaster ) {
 	  if (referrer) {
 	  	var ref = unescape(referrer);
 	  	console.log('app.get:Referrer:' + ref);
-	  	var re = /^http:\/\/([a-zA-Z0-9\.\-]+)/im;
+	  	var re = /^http:\/\/([a-zA-Z0-9\.\-\/]+)/im;
 	    var urlarray = re.exec(ref);
 	    if (urlarray && garbage == 0) {
 		  host = urlarray[1];
@@ -155,7 +190,7 @@ if ( cluster.isMaster ) {
 		  var nhost = host.replace(/^www\.(.*?)/im,"$1");
 		  if (nhost) host=nhost;
 		  var phost = host;
-		  host = host.replace(/^([A-Za-z0-9\.\-]).*$/im,"$1");
+		  host = host.replace(/^([A-Za-z0-9\.\-]+).*$/im,"$1");
 		  console.log('PHOST:' + phost + ' HOST:' + host);
 		  //now we have the host...will have to change this later on for dnainfo
   	    }
@@ -174,7 +209,7 @@ if ( cluster.isMaster ) {
 			connection.get(node,function(result) {
 			//console.log('memcache_get:Getting ' + node);
 			if (result.success && result.data) {
-			  console.log('app.get:Found ' + node);
+			  console.log('app.get:Found ' + node + ' in memcached');
 			  res.writeHead(200,{'Content-type':'text/html'});
 			  var adtag = result.data;
 			  var new_adtag = modify_tag(adtag,keys);
@@ -191,17 +226,16 @@ if ( cluster.isMaster ) {
 			  	  console.log('app.get:Not a UNI Passback...checking MySQL');
 				  if (mysqlc) {
 					var query = 'SELECT ad FROM ads WHERE size =\'' + size + '\' and node = \''+host+'\' and aid='+aid+' and adpos=\''+adpos+'\'';
-					//console.log(query);
 					mysqlc.query(query,function(err,rows,fields) {
 					  if (err) {
 					  	// write header and empty response
-					  	console.log('app.get:error getting ad from MySQL');
+					  	// maybe deliver default creative
+					  	console.log('app.get:error getting ad from MySQL for ' + host);
 						res.writeHead(200,{'Content-type':'text/html'});
 						res.end();
 					  } else if (rows[0]) {
 						var adtag = rows[0];
-						//console.log('Found Ad Tag in MySQL ' + adtag.ad);
-						//now enter the tag in memcached
+						// now enter the tag in memcached
 						connection.set(node,adtag.ad,function(result) {
 						  if (result.success) {
 						    console.log('app.get:Added tag for ' + node + ' to memcached');
@@ -219,7 +253,8 @@ if ( cluster.isMaster ) {
 					  	mysqlc.query(query,function(err,rows,fields) {
 					  		if (err) {
 					  		  res.writeHead(200,{'Content-type':'text/html'});
-					  		  res.end();
+					  		  var default = get_default(size);
+					  		  res.end(default);
 					  		} else if (rows[0]) {
 				  			  var tag = rows[0];
 				  			  connection.set(pb_id,tag.ad,function(result) {
@@ -231,32 +266,42 @@ if ( cluster.isMaster ) {
 				  			  }); // end connection.set
 				  			  res.writeHead(200,{'Content-type':'text/html'});
 				  			  res.end(tag.ad);
+					  		} else {
+					  		  //maybe send a default creative
+					  		  console.log('app.get:No passback found in MySQL');
+					  		  var default = get_default(size);
+					  		  res.writeHead(200,{'Content-type':'text/html'});
+					  		  res.end(default);
 					  		}     // end if err
 					  	});       // end of mysql.query for passback
 					  }           // end of if err for mysql query
 					});           // end of mysql.query for tag
 				  } else {
-				  	//write header and empty response
+				  	//maybe send a default creative
 					console.log('app.get:No MySQL Connection available');
+					var default = get_default(size);
 					res.writeHead(200,{'Content-type':'text/html'});
-					res.end();
+					res.end(default);
 				  } // end if mysqlc
 			  	}   // end if result.success for pb_id in memcached
 			  });   // end connection get pb_id
 			} 		// end of result.success
 		  }); 		// end of connection.get
 		} else {
+		  //maybe send a default creative
 		  console.log('app.get:No Memcached connection');
 		  res.writeHead(200,{'Content-type':'text/html'});
 		  res.end();
 		} // end of if connection(checking for memcached connection
 	  } else {
+	  	//maybe send a default creative
 		console.log('app.get:Problem with request');
 		res.writeHead(200,{'Content-type':'text/html'});
-		res.end();
-	  }  // end of if host
+		var default = get_default(size);
+		res.end(default);
+	  } // end of if host
 
-	});  // end of app.get
+	}); // end of app.get
 
 	http.createServer(app).listen(app.get('port'), function(){
 	  console.log("Express server listening on port " + app.get('port'));
