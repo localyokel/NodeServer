@@ -178,44 +178,68 @@ if ( cluster.isMaster ) {
 			  res.end(new_adtag);
 			} else {
 			  console.log('app.get:Not found in memcached ' + node);
-			  //console.log('app.get:Searching MySQL');
-			  if (mysqlc) {
-				var query = 'SELECT ad FROM ads WHERE size =\'' + size + '\' and node = \''+host+'\' and aid='+aid+' and adpos=\''+adpos+'\'';
-				//console.log(query);
-				mysqlc.query(query,function(err,rows,fields) {
-				  if (err) {
-				  	// write header and empty response
-				  	console.log('app.get:error getting ad from MySQL');
-					res.writeHead(200,{'Content-type':'text/html'});
-					res.end();
-				  } else if (rows[0]) {
-					var adtag = rows[0];
-					//console.log('Found Ad Tag in MySQL ' + adtag.ad);
-					//now enter the tag in memcached
-					connection.set(node,adtag.ad,function(result) {
-					  if (result.success) {
-					    console.log('app.get:Added tag for ' + node + ' to memcached');
+			  console.log('app.get:Checking for uni-passback');
+			  var pb_id = 'pb_' + aid;
+			  connection.get(pb_id,function(result) {
+			  	if (result.success && result.data) {
+			  	  res.writeHead(200,{'Content-type':'text/html'});
+			  	  res.end(result.data);
+			  	} else {
+			  	  console.log('app.get:Not a UNI Passback...checking MySQL');
+				  if (mysqlc) {
+					var query = 'SELECT ad FROM ads WHERE size =\'' + size + '\' and node = \''+host+'\' and aid='+aid+' and adpos=\''+adpos+'\'';
+					//console.log(query);
+					mysqlc.query(query,function(err,rows,fields) {
+					  if (err) {
+					  	// write header and empty response
+					  	console.log('app.get:error getting ad from MySQL');
+						res.writeHead(200,{'Content-type':'text/html'});
+						res.end();
+					  } else if (rows[0]) {
+						var adtag = rows[0];
+						//console.log('Found Ad Tag in MySQL ' + adtag.ad);
+						//now enter the tag in memcached
+						connection.set(node,adtag.ad,function(result) {
+						  if (result.success) {
+						    console.log('app.get:Added tag for ' + node + ' to memcached');
+						  } else {
+						    console.log('app.get:Couldn\'t add ' + node + ' to memcached');
+						  }
+						});
+						// deliver ad tag from mysql
+						res.writeHead(200,{'Content-type':'text/html'});
+						var new_adtag = modify_tag(adtag.ad,keys);
+						res.end(new_adtag);
 					  } else {
-					    console.log('app.get:Couldn\'t add ' + node + ' to memcached');
-					  }
-					});
-					// deliver ad tag from mysql
-					res.writeHead(200,{'Content-type':'text/html'});
-					var new_adtag = modify_tag(adtag.ad,keys);
-					res.end(new_adtag);
+					  	console.log('app.get:Not found in MySQL...checking for Passback');
+					  	query = 'SELECT ad FROM passbacks WHERE pb_id = \'' + pb_id;
+					  	mysqlc.query(query,function(err,rows,fields) {
+					  		if (err) {
+					  			res.writeHead(200,{'Content-type':'text/html'});
+					  			res.end();
+					  		} elsif (rows[0]) {
+					  			var tag = rows[0];
+					  			connection.set(pb_id,tag.ad,function(result) {
+					  				if (result.success) {
+					  					console.log('app.get:Added passback to memcached');
+					  				} else {
+					  					console.log('app.get:Couldn\'t add passback to memcached');
+					  				}
+					  			});
+					  			res.writeHead(200,{'Content-type':'text/html'});
+					  			res.end(tag.ad);
+					  		}
+					  	}); // end of mysql.query for passback
+					  }  // end of if err for mysql query
+					}); // end of mysql.query for tag
 				  } else {
-				  	// write header and empty response
-					console.log('app.get:MySQL tag not found');
+				  	//write header and empty response
+					console.log('app.get:No MySQL Connection available');
 					res.writeHead(200,{'Content-type':'text/html'});
 					res.end();
-				  }  // end of if err for mysql query
-				}); // end of mysql.query
-			  } else {
-			  	//write header and empty response
-				console.log('app.get:No MySQL Connection available');
-				res.writeHead(200,{'Content-type':'text/html'});
-				res.end();
-			  }  // end of if mysqlc
+				  } // end if mysqlc
+			  	} // end if result.success for pb_id in memcached
+			  });
 			} // end of result.success
 		  }); // end of connection.get
 		} else {
