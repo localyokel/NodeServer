@@ -126,36 +126,7 @@ if ( cluster.isMaster ) {
 	  	garbage = 1;
 	  }
 
-	  var def_id = size;
-	  var defc = '';
-	  connection.get(def_id,function(result) {
-			if (result.success && result.data) {
-				defc = result.data;  
-			} else {
-				if(mysqlc) {
-					query = 'SELECT ad FROM passbacks WHERE pb_id = \'' + def_id + '\'';
-					console.log(query)
-					mysqlc.query(query,function(err,rows,fields) {
-						if (err) {
-						  console.log('Error from MySQL while searching for default creative');
-						} else if (rows[0]) {
-						  connection.set(def_id,rows[0].ad,function(result) {
-				  			if (result.success) {
-				  			  console.log('app.get:Added default creative to memcached');
-				  			} else {
-				  			  console.log('app.get:Couldn\'t add default creative to memcached');
-				  			}
-				  		  });
-						  defc = rows[0].ad;
-						} else {
-						  console.log('No default creative found for ' + def_id);
-						}
-					});
-				} else {
-					console.log('No MySQL connection established when finding default creative');
-				}
-			}
-	  });
+	  
 
 	  // adpos is either atf or btf
 	  var adpos = req.query.adpos;
@@ -227,9 +198,37 @@ if ( cluster.isMaster ) {
 					  if (err) {
 					  	// write header and empty response
 					  	// maybe deliver default creative
-					  	console.log('app.get:error getting ad from MySQL for ' + host);
-						res.writeHead(200,{'Content-type':'text/html'});
-						res.end(defc);
+					  	  console.log('app.get:error getting ad from MySQL for ' + host);
+						  res.writeHead(200,{'Content-type':'text/html'});
+						  var def_id = size;
+						  connection.get(def_id,function(result) {
+								if (result.success && result.data) {
+									res.end(result.data);  
+								} else {
+									if(mysqlc) {
+										query = 'SELECT ad FROM passbacks WHERE pb_id = \'' + def_id + '\'';
+										console.log(query)
+										mysqlc.query(query,function(err,rows,fields) {
+											if (err) {
+											  console.log('Error from MySQL while searching for default creative');
+											} else if (rows[0]) {
+											  connection.set(def_id,rows[0].ad,function(result) {
+									  			if (result.success) {
+									  			  console.log('app.get:Added default creative to memcached');
+									  			} else {
+									  			  console.log('app.get:Couldn\'t add default creative to memcached');
+									  			}
+									  		  });
+											  res.end(rows[0].ad);
+											} else {
+											  console.log('No default creative found for ' + def_id);
+											}
+										});
+									} else {
+										console.log('No MySQL connection established when finding default creative');
+									}
+								}
+						  });
 					  } else if (rows[0]) {
 						var adtag = rows[0];
 						// now enter the tag in memcached
@@ -250,8 +249,38 @@ if ( cluster.isMaster ) {
 					  	mysqlc.query(query,function(err,rows,fields) {
 					  		if (err) {
 					  		  res.writeHead(200,{'Content-type':'text/html'});
-					  		  var defc = get_default(size);
-					  		  res.end(defc);
+							  var def_id = size;
+							  connection.get(def_id,function(result) {
+								if (result.success && result.data) {
+									res.end(result.data);  
+								} else {
+									if(mysqlc) {
+										query = 'SELECT ad FROM passbacks WHERE pb_id = \'' + def_id + '\'';
+										console.log(query)
+										mysqlc.query(query,function(err,rows,fields) {
+											if (err) {
+											  console.log('Error from MySQL while searching for default creative');
+											  res.end();
+											} else if (rows[0]) {
+											  connection.set(def_id,rows[0].ad,function(result) {
+									  			if (result.success) {
+									  			  console.log('app.get:Added default creative to memcached');
+									  			} else {
+									  			  console.log('app.get:Couldn\'t add default creative to memcached');
+									  			}
+									  		  });
+											  res.end(rows[0].ad);
+											} else {
+											  console.log('No default creative found for ' + def_id);
+											  res.end();
+											}
+										});
+									} else {
+										console.log('No MySQL connection established when finding default creative');
+										res.end();
+									}
+								}
+							  });
 					  		} else if (rows[0]) {
 				  			  var tag = rows[0];
 				  			  connection.set(pb_id,tag.ad,function(result) {
@@ -266,17 +295,80 @@ if ( cluster.isMaster ) {
 					  		} else {
 					  		  //maybe send a default creative
 					  		  console.log('app.get:No passback found in MySQL');
-					  		  res.writeHead(200,{'Content-type':'text/html'});
-					  		  res.end(defc);
+							  res.writeHead(200,{'Content-type':'text/html'});
+							  var def_id = size;
+							  connection.get(def_id,function(result) {
+									if (result.success && result.data) {
+										res.end(result.data);  
+									} else {
+										if(mysqlc) {
+											query = 'SELECT ad FROM passbacks WHERE pb_id = \'' + def_id + '\'';
+											console.log(query)
+											mysqlc.query(query,function(err,rows,fields) {
+												if (err) {
+												  console.log('Error from MySQL while searching for default creative');
+												  res.end();
+												} else if (rows[0]) {
+												  connection.set(def_id,rows[0].ad,function(result) {
+										  			if (result.success) {
+										  			  console.log('app.get:Added default creative to memcached');
+										  			} else {
+										  			  console.log('app.get:Couldn\'t add default creative to memcached');
+										  			}
+										  		  });
+												  res.end(rows[0].ad);
+												} else {
+												  console.log('No default creative found for ' + def_id);
+												  res.end();
+												}
+											});
+										} else {
+											console.log('No MySQL connection established when finding default creative');
+											res.end();
+										}
+									}
+							  });
 					  		}     // end if err
 					  	});       // end of mysql.query for passback
 					  }           // end of if err for mysql query
 					});           // end of mysql.query for tag
 				  } else {
-				  	//maybe send a default creative
-					console.log('app.get:No MySQL Connection available');
-					res.writeHead(200,{'Content-type':'text/html'});
-					res.end(defc);
+				  	  //maybe send a default creative
+					  console.log('app.get:No MySQL Connection available');
+					  res.writeHead(200,{'Content-type':'text/html'});
+					  var def_id = size;
+					  connection.get(def_id,function(result) {
+							if (result.success && result.data) {
+								res.end(result.data);  
+							} else {
+								if(mysqlc) {
+									query = 'SELECT ad FROM passbacks WHERE pb_id = \'' + def_id + '\'';
+									console.log(query)
+									mysqlc.query(query,function(err,rows,fields) {
+										if (err) {
+										  console.log('Error from MySQL while searching for default creative');
+										  res.end();
+										} else if (rows[0]) {
+										  connection.set(def_id,rows[0].ad,function(result) {
+								  			if (result.success) {
+								  			  console.log('app.get:Added default creative to memcached');
+								  			} else {
+								  			  console.log('app.get:Couldn\'t add default creative to memcached');
+								  			}
+								  		  });
+										  res.end(rows[0].ad);
+										} else {
+										  console.log('No default creative found for ' + def_id);
+										  res.end();
+										}
+									});
+								} else {
+									console.log('No MySQL connection established when finding default creative');
+									res.end();
+								}
+							}
+					  });
+
 				  } // end if mysqlc
 			  	}   // end if result.success for pb_id in memcached
 			  });   // end connection get pb_id
@@ -286,15 +378,76 @@ if ( cluster.isMaster ) {
 		  //maybe send a default creative
 		  console.log('app.get:No Memcached connection');
 		  res.writeHead(200,{'Content-type':'text/html'});
-		  res.end(defc);
+		  var def_id = size;
+		  connection.get(def_id,function(result) {
+				if (result.success && result.data) {
+					res.end(result.data);  
+				} else {
+					if(mysqlc) {
+						query = 'SELECT ad FROM passbacks WHERE pb_id = \'' + def_id + '\'';
+						console.log(query)
+						mysqlc.query(query,function(err,rows,fields) {
+							if (err) {
+							  console.log('Error from MySQL while searching for default creative');
+							  res.end();
+							} else if (rows[0]) {
+							  connection.set(def_id,rows[0].ad,function(result) {
+					  			if (result.success) {
+					  			  console.log('app.get:Added default creative to memcached');
+					  			} else {
+					  			  console.log('app.get:Couldn\'t add default creative to memcached');
+					  			}
+					  		  });
+							  res.end(rows[0].ad);
+							} else {
+							  console.log('No default creative found for ' + def_id);
+							  res.end();
+							}
+						});
+					} else {
+						console.log('No MySQL connection established when finding default creative');
+						res.end();
+					}
+				}
+		  });
 		} // end of if connection(checking for memcached connection
 	  } else {
-	  	//maybe send a default creative
-		console.log('app.get:Problem with request');
-		res.writeHead(200,{'Content-type':'text/html'});
-		res.end(defc);
+	  	  //maybe send a default creative
+		  console.log('app.get:Problem with request');
+		  res.writeHead(200,{'Content-type':'text/html'});
+		  var def_id = size;
+		  connection.get(def_id,function(result) {
+				if (result.success && result.data) {
+					res.end(result.data);  
+				} else {
+					if(mysqlc) {
+						query = 'SELECT ad FROM passbacks WHERE pb_id = \'' + def_id + '\'';
+						console.log(query)
+						mysqlc.query(query,function(err,rows,fields) {
+							if (err) {
+							  console.log('Error from MySQL while searching for default creative');
+							  res.end();
+							} else if (rows[0]) {
+							  connection.set(def_id,rows[0].ad,function(result) {
+					  			if (result.success) {
+					  			  console.log('app.get:Added default creative to memcached');
+					  			} else {
+					  			  console.log('app.get:Couldn\'t add default creative to memcached');
+					  			}
+					  		  });
+							  res.end(rows[0].ad);
+							} else {
+							  console.log('No default creative found for ' + def_id);
+							  res.end();
+							}
+						});
+					} else {
+						console.log('No MySQL connection established when finding default creative');
+						res.end();
+					}
+				}
+		  });
 	  } // end of if host
-
 	}); // end of app.get
 
 	http.createServer(app).listen(app.get('port'), function(){
