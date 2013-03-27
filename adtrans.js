@@ -57,7 +57,13 @@ if ( cluster.isMaster ) {
 	  database:'ads',
 	  password:'Not4u2!',
 	});
-	mysqlc.connect();
+	var mysql_connected = 1;
+	mysqlc.connect(function(err) {
+		if (err) {
+			console.log('MySQL connection failed:' + err.message);
+			mysql_connected = 0;
+		}
+	});
 
 	var basetag = '<script type="text/javascript">var ados = ados || {};ados.run = ados.run || [];ados.run.push(function() {ados_setDomain(\'engine.localyokelmedia.com\');_KEYWORDS_ados_addInlinePlacement(4413, _SITEID_, _SIZE_)_SETZONE_.setClickUrl(\'-optional-click-macro-\').loadInline();});</script><script type="text/javascript" src="http://static.localyokelmedia.com/ados.js"></script>';
 
@@ -224,7 +230,7 @@ if ( cluster.isMaster ) {
 							    }
 						  	} else {
 						  		console.log(tid + ':7:' + aid + ' not found in memcached');
-						  		if (mysqlc) {
+						  		if (mysql_connected) {
 							  		var query = "SELECT info FROM aid_info WHERE aid = " + aid;
 							  		mysqlc.query(query,function(err,rows,fields) {
 							  			if (err || !rows[0]) {
@@ -342,7 +348,7 @@ if ( cluster.isMaster ) {
 					} else { // if result.success for connection.get hkey else for no results
 						//check mysql to see if site is whitelisted
 						console.log(tid + ':11:' +  host + ' not whitelisted in memcached');
-						if (mysqlc) {
+						if (mysql_connected) {
 							var query = 'SELECT flag FROM whitelist WHERE host = \'' + host + '\'';
 							mysqlc.query(query,function(err,rows,fields) {
 								if (rows[0]) {
@@ -600,7 +606,7 @@ if ( cluster.isMaster ) {
 				}); // end connection.get hkey
 			} else { // else for if memcached connnection
 				console.log(tid + ':17:No memcached connection...check MySQL');
-				if (mysqlc) {
+				if (mysql_connected) {
 					var query = 'SELECT flag FROM whitelist WHERE host = \'' + host + '\'';
 					mysqlc.query(query,function(err,rows,fields) {
 						if (err || !rows[0]) {
