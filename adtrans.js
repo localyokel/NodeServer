@@ -67,7 +67,7 @@ if ( cluster.isMaster ) {
 		new_adtag = new_adtag.replace(/_KEYWORDS_/,"");
 		new_adtag = new_adtag.replace(/_SITEID_/,"28036");
 		new_adtag = new_adtag.replace(/_SETZONE_/,"");
-		res.writeHead(200,{'Content-type':'text/html'});
+		return new_adtag;
 	}
 
 	app.get('/', function(req,res) {
@@ -97,14 +97,14 @@ if ( cluster.isMaster ) {
     // get the adtest.html file from the server
 	app.get('/ntest.html',function(req,res) {
         fs.readFile('./ntest.html',function(error,content) {
-        if (error) {
-          res.writeHead(200,{'Content-type':'text/html'});
-          res.end();
-        } else {
-          res.writeHead(200,{'Content-type':'text/html'});
-          res.end(content,'utf-8');
-        }
-      });
+        	if (error) {
+        		res.writeHead(200,{'Content-type':'text/html'});
+        		res.end();
+        	} else {
+        		res.writeHead(200,{'Content-type':'text/html'});
+        		res.end(content,'utf-8');
+        	}
+    	});
     });
 
 	app.get('/a',function(req,res) {
@@ -114,12 +114,13 @@ if ( cluster.isMaster ) {
 	    var ref     = req.query.ref;
 	    var garbage = 0;
 
-	    var new_adtag = basetag;
+	    //This is the thread id for logging purposes
+	    var tid = Math.floor(Math.random()*100);
 
 	    // aid is the ad id and is only numeric
 	    var aid = req.query.aid;
 	    if (isNaN(aid)) {
-	  		console.log('1:Bad aid:'+aid);
+	  		console.log(tid+':1:Bad aid:'+aid);
 	  		//send default creative
 	  		var new_adtag = default_ad(size,basetag);
 			res.writeHead(200,{'Content-type':'text/html'});
@@ -130,318 +131,110 @@ if ( cluster.isMaster ) {
 	    	host = host.replace(/^([^\/]+).*?$/im,"$1");
 	    	var hkey = "WL:" + host;
 	    	//first check to see if it is a whitelisted URL
-	    	connection.get(hkey,function(result) {
-	    		if (result.success && result.data) {
-	    			//now check for its memcache aid entry
-				    console.log('2:' + host + ' is whitelisted');
-				    connection.get(aid, function(result) {
-					  	if (result.success && result.data) {
-					  		console.log('3:' + aid + ' found in memcached');
-					  		var aid_data   = result.data.split(":");
-					  		if (aid_data.length > 2) {
-					    		var siteid = aid_data[0];
-						  		var zoneid = aid_data[1];
-						  		var apos   = aid_data[2];
+	    	if (connection) {
+		    	connection.get(hkey,function(result) {
+		    		if (result.success && result.data) {
+		    			//now check for its memcache aid entry
+					    console.log(tid+':2:' + host + ' is whitelisted');
+					    connection.get(aid, function(result) {
+						  	if (result.success && result.data) {
+						  		console.log(tid + ':3:' + aid + ' found in memcached');
+						  		var aid_data   = result.data.split(":");
+						  		if (aid_data.length > 2) {
+						    		var siteid = aid_data[0];
+							  		var zoneid = aid_data[1];
+							  		var apos   = aid_data[2];
 
-					  			new_adtag = new_adtag.replace(/_SIZE_/,size);
+							  		var new_adtag = basetag;
+						  			new_adtag = new_adtag.replace(/_SIZE_/,size);
 
-						  		if (!apos && adpos) {
-						  			apos = adpos;
-						  		} else if (!apos && !adpos) {
-						  			apos = 'atf';
-						  		}
+							  		if (!apos && adpos) {
+							  			apos = adpos;
+							  		} else if (!apos && !adpos) {
+							  			apos = 'atf';
+							  		}
 
-						  		if (keys) {
-							  		keys = keys.replace(/["']+/g,"");
-							  		keys = keys + ',' + apos;
-							  	} else {
-							  		keys = apos;
-							  	}
-							  	new_adtag = new_adtag.replace(/_KEYWORDS_/,"ados_setKeywords('" + keys + "');");
+							  		if (keys) {
+								  		keys = keys.replace(/["']+/g,"");
+								  		keys = keys + ',' + apos;
+								  	} else {
+								  		keys = apos;
+								  	}
+								  	new_adtag = new_adtag.replace(/_KEYWORDS_/,"ados_setKeywords('" + keys + "');");
 
-						  		if (!siteid) {
-						  			garbage = 1;
-						  		} else {
-						  			new_adtag = new_adtag.replace(/_SITEID_/im,siteid);
-						  		}
+							  		if (!siteid) {
+							  			garbage = 1;
+							  		} else {
+							  			new_adtag = new_adtag.replace(/_SITEID_/im,siteid);
+							  		}
 
-						  		if (!zoneid) {
-						  			console.log('4:No zoneid defined');
-						  			//do we check paths at this point?
-						  			//if we store all zones for an aid, then we just replace _SETZONE_ with nothing, right?
-						  			new_adtag = new_adtag.replace(/_SETZONE_/im,"");
-						  		} else {
-						  			//check to see if there is more than one zone
-						  			console.log('5a:zoneid:' + zoneid);
-						  			var zones = zoneid.split(",");
-						  			if (zones.length == 1) {
-						  				console.log('5b:Just one zoneid');
-						  				new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
-						  			} else {
-						  				console.log('5c:More than one zoneid');
-						  				ref = ref.replace(/^http:\/\//im,"/");
-						  				ref = ref.replace(/^\/www\./im,"/");
-						  				ref = ref.replace(/[^\/]+$/im,"");
-						  				var elements = ref.split("/");
-						  				var path;
-						  				var j = 0;
-						  				var nodes;
-						  				for (var i=0; i < elements.length; i++) {
-						  					path = path + "/";
-						  					nodes[j] = path;
-						  					j++;
-						  				}
-						  				var done = 0;
-						  				for (var i=nodes.length -1; i >= 0; i--) {
-						  					connection.get(nodes[i], function(result) {
-						  						if (result.success && result.data) {
-						  							console.log('5d:' + nodes[i] + ' has zoneid');
-						  							done = 1;
-						  							zoneid = result.data;
-						  							new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
-						  						}
-						  					});
-						  					if (done == 1) break;
-						  				}
-						  				if (!done) {
-						  					console.log('5e:No zoneid defined');
-						  					//the aid had more than one zone, but none applied to the ref
-						  					//use no zone
-						  					new_adtag = new_adtag.replace(/_SETZONE_/im,"");
-						  				}
-						  			}
-						  		}
-						  		console.log('5f:Writing ad');
-						    	res.writeHead(200,{'Content-type':'text/html'});
-						    	res.end(new_adtag);
-						    } else {
-						    	console.log('6:Invalid aid data' + result.data);
-						    	res.writeHead(200,{'Content-type':'text/html'});
-						    	res.end();
-						    }
-					  	} else {
-					  		console.log('7:' + aid + ' not found in memcached');
-					  		var query = "SELECT info FROM aid_info WHERE aid = " + aid;
-					  		mysqlc.query(query,function(err,rows,fields) {
-					  			if (err || !rows[0]) {
-					  				console.log('8:' + aid + ' not found in MySQL...sending default');
-									//send default creative
-									var new_adtag = default_ad(size,basetag);
-									res.writeHead(200,{'Content-type':'text/html'});
-									res.end(new_adtag);
-					  			} else {
-					  				console.log('9:' + aid + ' found in MySQL');
-					  				connection.set(aid, rows[0].info, function(result) {
-					  					if (result.success) {
-					  						//worked
-					  					} else {
-					  						//didn't work
-					  					}
-					  				});
-					  				var aid_data = rows[0].aid_data.split(":");
-							  		if (aid_data.length > 2) {
-							  			console.log('9a:aid_data:' + rows[0].aid_data + ' is good');
-							    		var siteid = aid_data[0];
-								  		var zoneid = aid_data[1];
-								  		var apos   = aid_data[2];
-								  		
-							  			new_adtag = new_adtag.replace(/_SIZE_/,size);
-
-								  		if (!apos && adpos) {
-								  			apos = adpos;
-								  		} else if (!apos && !adpos) {
-								  			apos = 'atf';
-								  		}
-
-								  		if (keys) {
-									  		keys = keys.replace(/["']+/g,"");
-									  		keys = keys + ',' + apos;
-									  	} else {
-									  		keys = apos;
-									  	}
-									  	new_adtag = new_adtag.replace(/_KEYWORDS_/,"ados_setKeywords('" + keys + "');");
-
-								  		if (!siteid) {
-								  			garbage = 1;
-								  		} else {
-								  			new_adtag = new_adtag.replace(/_SITEID_/im,siteid);
-								  		}
-
-								  		if (!zoneid) {
-								  			//do we check paths at this point?
-								  			//if we store all zones for an aid, then we just replace _SETZONE_ with nothing, right?
-								  			console.log('9b:No zoneid');
-								  			new_adtag = new_adtag.replace(/_SETZONE_/im,"");
-								  		} else {
-								  			//check to see if there is more than one zone
-								  			console.log('9c:zoneid:' + zoneid);
-								  			var zones = zoneid.split(",");
-								  			if (zones.length == 1) {
-								  				console.log('9d:Only one zone');
-								  				new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
-								  			} else {
-								  				console.log('9e:More than one zone');
-								  				ref = ref.replace(/^http:\/\//im,"/");
-								  				ref = ref.replace(/^\/www\./im,"/");
-								  				ref = ref.replace(/[^\/]+$/im,"");
-								  				var elements = ref.split("/");
-								  				var path;
-								  				var j = 0;
-								  				var nodes;
-								  				for (var i=0; i < elements.length; i++) {
-								  					path = path + "/";
-								  					nodes[j] = path;
-								  					j++;
-								  				}
-								  				var done = 0;
-								  				for (var i=nodes.length -1; i >= 0; i--) {
-								  					connection.get(nodes[i], function(result) {
-								  						if (result.success && result.data) {
-								  							console.log('9f:' + nodes[i] + ' has zone ' + result.data);
-								  							done = 1;
-								  							zoneid = result.data;
-								  							new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
-								  						}
-								  					});
-								  					if (done == 1) break;
-								  				}
-								  				if (!done) {
-								  					//the aid had more than one zone, but none applied to the ref
-								  					//use no zone
-								  					console.log('9g:No zoneid');
-								  					new_adtag = new_adtag.replace(/_SETZONE_/im,"");
-								  				}
-								  			}
-								  		}
-								  		console.log('9h:Writing ad');
-								    	res.writeHead(200,{'Content-type':'text/html'});
-								    	res.end(new_adtag);
-								    } else {
-								    	//send default creative
-								    	console.log('10:aid_data:' + rows[0].aid_data + ' is malformed');
-								    	var new_adtag = default_ad(size,basetag);
-										res.writeHead(200,{'Content-type':'text/html'});
-										res.end(new_adtag);
-								    } // end if aid_data.length > 0
-					  			} // end if have mysql results for aid
-					  		}); // end mysql get aid
-					  	} // end if result.success for connection.get aid
-				    }); // end connection.get aid
-				} else { // if result.success for connection.get hkey else
-					//check mysql to see if site is whitelisted
-					console.log('11:' +  host + ' not whitelisted in memcached');
-					var query = 'SELECT flag FROM whitelist WHERE host = \'' + host + '\'';
-					mysqlc.query(query,function(err,rows,fields) {
-						if (rows[0]) {
-							console.log('12:' + host + ' is whitelisted in MySQL');
-							//site is whitelisted...go through the whole routine
-							connection.set(hkey,'1',function(result) {
-								if (result.success) {
-									//added whitelist for host to memcache
-								}
-							});
-
-			    			//now check for its memcache aid entry
-						    connection.get(aid, function(result) {
-							  	if (result.success && result.data) {
-							  		console.log('13:' + aid + ' found in memcached');
-							  		var aid_data   = result.data.split(":");
-							  		if (aid_data.length > 2) {
-							  			console.log('13a:aid_data ' + result.data + ' is good');
-							    		var siteid = aid_data[0];
-								  		var zoneid = aid_data[1];
-								  		var apos   = aid_data[2];
-
-							  			new_adtag = new_adtag.replace(/_SIZE_/,size);
-
-								  		if (!apos && adpos) {
-								  			apos = adpos;
-								  		} else if (!apos && !adpos) {
-								  			apos = 'atf';
-								  		}
-
-								  		if (keys) {
-									  		keys = keys.replace(/["']+/g,"");
-									  		keys = keys + ',' + apos;
-									  	} else {
-									  		keys = apos;
-									  	}
-									  	new_adtag = new_adtag.replace(/_KEYWORDS_/,"ados_setKeywords('" + keys + "');");
-
-								  		if (!siteid) {
-								  			garbage = 1;
-								  		} else {
-								  			new_adtag = new_adtag.replace(/_SITEID_/im,siteid);
-								  		}
-
-								  		if (!zoneid) {
-								  			//do we check paths at this point?
-								  			//if we store all zones for an aid, then we just replace _SETZONE_ with nothing, right?
-								  			console.log('13b:No zoneid');
-								  			new_adtag = new_adtag.replace(/_SETZONE_/im,"");
-								  		} else {
-								  			//check to see if there is more than one zone
-								  			console.log('13c:zoneid:' + zoneid);
-								  			var zones = zoneid.split(",");
-								  			if (zones.length == 1) {
-								  				console.log('13d:Only one zoneid');
-								  				new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
-								  			} else {
-								  				console.log('13e:Multiple zoneids')
-								  				ref = ref.replace(/^http:\/\//im,"/");
-								  				ref = ref.replace(/^\/www\./im,"/");
-								  				ref = ref.replace(/[^\/]+$/im,"");
-								  				var elements = ref.split("/");
-								  				var path;
-								  				var j = 0;
-								  				var nodes;
-								  				for (var i=0; i < elements.length; i++) {
-								  					path = path + "/";
-								  					nodes[j] = path;
-								  					j++;
-								  				}
-								  				var done = 0;
-								  				for (var i=nodes.length -1; i >= 0; i--) {
-								  					connection.get(nodes[i], function(result) {
-								  						if (result.success && result.data) {
-								  							console.log('13f:' + nodes[i] + ' has zoneid ' + result.data);
-								  							done = 1;
-								  							zoneid = result.data;
-								  							new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
-								  						}
-								  					});
-								  					if (done == 1) break;
-								  				}
-								  				if (!done) {
-								  					//the aid had more than one zone, but none applied to the ref
-								  					//use no zone
-								  					console.log('13g:No zoneid');
-								  					new_adtag = new_adtag.replace(/_SETZONE_/im,"");
-								  				}
-								  			}
-								  		}
-								  		console.log('13h:Writing ad');
-								    	res.writeHead(200,{'Content-type':'text/html'});
-								    	res.end(new_adtag);
-								    } else {  // if aid_data.length > 0
-								    	// we don't have good data to work with, send default
-								    	//send default creative
-								    	console.log('14:aid_data malformed');
-								    	var new_adtag = default_ad(size,basetag);
-										res.end(new_adtag);
-								    } // end if aid_data.length > 0
-							  	} else { // if result.success for connection.get aid
-							  		console.log('15:' + aid + ' not found in memcache');
+							  		if (!zoneid) {
+							  			console.log(tid + ':4:No zoneid defined');
+							  			//do we check paths at this point?
+							  			//if we store all zones for an aid, then we just replace _SETZONE_ with nothing, right?
+							  			new_adtag = new_adtag.replace(/_SETZONE_/im,"");
+							  		} else {
+							  			//check to see if there is more than one zone
+							  			console.log(tid + ':5a:zoneid:' + zoneid);
+							  			var zones = zoneid.split(",");
+							  			if (zones.length == 1) {
+							  				console.log(tid + ':5b:Just one zoneid');
+							  				new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
+							  			} else {
+							  				console.log(tid + ':5c:More than one zoneid');
+							  				ref = ref.replace(/^http:\/\//im,"/");
+							  				ref = ref.replace(/^\/www\./im,"/");
+							  				ref = ref.replace(/[^\/]+$/im,"");
+							  				var elements = ref.split("/");
+							  				var path;
+							  				var j = 0;
+							  				var nodes;
+							  				for (var i=0; i < elements.length; i++) {
+							  					path = path + "/";
+							  					nodes[j] = path;
+							  					j++;
+							  				}
+							  				var done = 0;
+							  				for (var i=nodes.length -1; i >= 0; i--) {
+							  					connection.get(nodes[i], function(result) {
+							  						if (result.success && result.data) {
+							  							console.log(tid + ':5d:' + nodes[i] + ' has zoneid');
+							  							done = 1;
+							  							zoneid = result.data;
+							  							new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
+							  						}
+							  					});
+							  					if (done == 1) break;
+							  				}
+							  				if (!done) {
+							  					console.log(tid + ':5e:No zoneid defined');
+							  					//the aid had more than one zone, but none applied to the ref
+							  					//use no zone
+							  					new_adtag = new_adtag.replace(/_SETZONE_/im,"");
+							  				}
+							  			}
+							  		}
+							  		console.log(tid + ':5f:Writing ad');
+							    	res.writeHead(200,{'Content-type':'text/html'});
+							    	res.end(new_adtag);
+							    } else {
+							    	console.log(tid + ':6:Invalid aid data' + result.data);
+							    	res.writeHead(200,{'Content-type':'text/html'});
+							    	res.end();
+							    }
+						  	} else {
+						  		console.log(tid + ':7:' + aid + ' not found in memcached');
+						  		if (mysqlc) {
 							  		var query = "SELECT info FROM aid_info WHERE aid = " + aid;
 							  		mysqlc.query(query,function(err,rows,fields) {
 							  			if (err || !rows[0]) {
-							  				console.log('15a:' + aid + 'not found in MySQL...sending default');
+							  				console.log(tid + ':8:' + aid + ' not found in MySQL...sending default');
 											//send default creative
 											var new_adtag = default_ad(size,basetag);
 											res.writeHead(200,{'Content-type':'text/html'});
 											res.end(new_adtag);
 							  			} else {
-							  				console.log('15b:' + aid + ' found in MySQL');
+							  				console.log(tid + ':9:' + aid + ' found in MySQL');
 							  				connection.set(aid, rows[0].info, function(result) {
 							  					if (result.success) {
 							  						//worked
@@ -449,13 +242,14 @@ if ( cluster.isMaster ) {
 							  						//didn't work
 							  					}
 							  				});
-							  				var aid_data = rows[0].aid_data.split(":");
+							  				var aid_data = rows[0].info.split(":");
 									  		if (aid_data.length > 2) {
-									  			console.log('15c:aid_data:' + rows[0].aid_data + ' is good');
+									  			console.log(tid + ':9a:aid_data:' + rows[0].info + ' is good');
 									    		var siteid = aid_data[0];
 										  		var zoneid = aid_data[1];
 										  		var apos   = aid_data[2];
-
+										  		
+										  		var new_adtag = basetag;
 									  			new_adtag = new_adtag.replace(/_SIZE_/,size);
 
 										  		if (!apos && adpos) {
@@ -481,17 +275,17 @@ if ( cluster.isMaster ) {
 										  		if (!zoneid) {
 										  			//do we check paths at this point?
 										  			//if we store all zones for an aid, then we just replace _SETZONE_ with nothing, right?
-										  			console.log('15d:No zoneid');
+										  			console.log(tid + ':9b:No zoneid');
 										  			new_adtag = new_adtag.replace(/_SETZONE_/im,"");
 										  		} else {
-										  			console.log('15e:zoneid:' + zoneid);
 										  			//check to see if there is more than one zone
+										  			console.log(tid + ':9c:zoneid:' + zoneid);
 										  			var zones = zoneid.split(",");
 										  			if (zones.length == 1) {
-										  				console.log('15f:One zoneid');
+										  				console.log(tid + ':9d:Only one zone');
 										  				new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
 										  			} else {
-										  				console.log('15g:Multiple zoneids');
+										  				console.log(tid + ':9e:More than one zone');
 										  				ref = ref.replace(/^http:\/\//im,"/");
 										  				ref = ref.replace(/^\/www\./im,"/");
 										  				ref = ref.replace(/[^\/]+$/im,"");
@@ -508,7 +302,7 @@ if ( cluster.isMaster ) {
 										  				for (var i=nodes.length -1; i >= 0; i--) {
 										  					connection.get(nodes[i], function(result) {
 										  						if (result.success && result.data) {
-										  							console.log('15h:' + nodes[i] + ' has zoneid:' + result.data);
+										  							console.log(tid + ':9f:' + nodes[i] + ' has zone ' + result.data);
 										  							done = 1;
 										  							zoneid = result.data;
 										  							new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
@@ -517,65 +311,417 @@ if ( cluster.isMaster ) {
 										  					if (done == 1) break;
 										  				}
 										  				if (!done) {
-										  					console.log('15i:No zoneid');
 										  					//the aid had more than one zone, but none applied to the ref
 										  					//use no zone
+										  					console.log(tid + ':9g:No zoneid');
 										  					new_adtag = new_adtag.replace(/_SETZONE_/im,"");
 										  				}
 										  			}
 										  		}
+										  		console.log(tid + ':9h:Writing ad');
 										    	res.writeHead(200,{'Content-type':'text/html'});
 										    	res.end(new_adtag);
-										    } else { // if aid_data.length > 0
+										    } else {
 										    	//send default creative
-										    	console.log('15j:Malformed aid_data:' + rows[0].aid_data);
+										    	console.log(tid + ':10:aid_data:' + rows[0].info + ' is malformed');
 										    	var new_adtag = default_ad(size,basetag);
 												res.writeHead(200,{'Content-type':'text/html'});
 												res.end(new_adtag);
 										    } // end if aid_data.length > 0
 							  			} // end if have mysql results for aid
 							  		}); // end mysql get aid
-							  	} // end if result.success for connection.get aid
-						    }); // end connection.get aid	
-						} else { // if rows[0] else
-							//not whitelisted for sure...
-							console.log('16:' + host + ' not whitelisted in MySQL');
-							var pbkey = 'pb_' + aid;
-							connection.get(pbkey, function(result) {
-								if (result.success && result.data) {
-									console.log('16a:Found passback for ' + pb_key + ' in memcached...sending');
-									res.writeHead(200,{'Content-type':'text/html'});
-									res.end(result.data);
 								} else {
-									console.log('16b:No passback in memcached');
-									var query = 'SELECT ad FROM passbacks WHERE pb_id=' + aid;
-									mysqlc.query(query,function(err,rows,fields) {
-										if (rows[0]) {
-											console.log('16c:Found passback for ' + pb_id + ' in MySQL...sending');
-											connection.set(pbkey,rows[0].ad,function(result) {
-												if (result.success) {
-													//added to memcache
-												} else {
-													//didn't add to memcache
-												}
-											});
-											res.writeHead(200,{'Content-type':'text/html'});
-											res.end(rows[0].ad);
-										} else {
-											//either we have an error or no results...send default
-											//send default creative
-											console.log('16d:Passback not found...sending default');
-											var new_adtag = default_ad(size,basetag);
-											res.writeHead(200,{'Content-type':'text/html'});
-											res.end(new_adtag);
+									//no mysql connection...
+									console.log(tid + ':10a:No MySQL connection...serving default');
+									var new_adtag = default_ad(size,basetag);
+									res.writeHead(200,{'Content-type':'text/html'});
+									res.end(new_adtag);
+								} // end if mysqlc for mysql get aid_info
+						  	} // end if result.success for connection.get aid
+					    }); // end connection.get aid
+					} else { // if result.success for connection.get hkey else for no results
+						//check mysql to see if site is whitelisted
+						console.log(tid + ':11:' +  host + ' not whitelisted in memcached');
+						if (mysqlc) {
+							var query = 'SELECT flag FROM whitelist WHERE host = \'' + host + '\'';
+							mysqlc.query(query,function(err,rows,fields) {
+								if (rows[0]) {
+									console.log(tid + ':12:' + host + ' is whitelisted in MySQL');
+									//site is whitelisted...go through the whole routine
+									connection.set(hkey,'1',function(result) {
+										if (result.success) {
+											//added whitelist for host to memcache
 										}
-									}); // end mysql query passbacks
-								} // end if result.success pbkey
-							}); // end connection.get pbkey
-						}  // end if rows[0]
-					}); // end mysql query whitelist
-				} // end if result.success
-			}); // end connection.get hkey
+									});
+
+					    			//now check for its memcache aid entry
+								    connection.get(aid, function(result) {
+									  	if (result.success && result.data) {
+									  		console.log(tid + ':13:' + aid + ' found in memcached');
+									  		var aid_data   = result.data.split(":");
+									  		if (aid_data.length > 2) {
+									  			console.log(tid + ':13a:aid_data ' + result.data + ' is good');
+									    		var siteid = aid_data[0];
+										  		var zoneid = aid_data[1];
+										  		var apos   = aid_data[2];
+
+										  		var new_adtag = basetag;
+									  			new_adtag = new_adtag.replace(/_SIZE_/,size);
+
+										  		if (!apos && adpos) {
+										  			apos = adpos;
+										  		} else if (!apos && !adpos) {
+										  			apos = 'atf';
+										  		}
+
+										  		if (keys) {
+											  		keys = keys.replace(/["']+/g,"");
+											  		keys = keys + ',' + apos;
+											  	} else {
+											  		keys = apos;
+											  	}
+											  	new_adtag = new_adtag.replace(/_KEYWORDS_/,"ados_setKeywords('" + keys + "');");
+
+										  		if (!siteid) {
+										  			garbage = 1;
+										  		} else {
+										  			new_adtag = new_adtag.replace(/_SITEID_/im,siteid);
+										  		}
+
+										  		if (!zoneid) {
+										  			//do we check paths at this point?
+										  			//if we store all zones for an aid, then we just replace _SETZONE_ with nothing, right?
+										  			console.log(tid + ':13b:No zoneid');
+										  			new_adtag = new_adtag.replace(/_SETZONE_/im,"");
+										  		} else {
+										  			//check to see if there is more than one zone
+										  			console.log(tid + ':13c:zoneid:' + zoneid);
+										  			var zones = zoneid.split(",");
+										  			if (zones.length == 1) {
+										  				console.log(tid + ':13d:Only one zoneid');
+										  				new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
+										  			} else {
+										  				console.log(tid + ':13e:Multiple zoneids')
+										  				ref = ref.replace(/^http:\/\//im,"/");
+										  				ref = ref.replace(/^\/www\./im,"/");
+										  				ref = ref.replace(/[^\/]+$/im,"");
+										  				var elements = ref.split("/");
+										  				var path;
+										  				var j = 0;
+										  				var nodes;
+										  				for (var i=0; i < elements.length; i++) {
+										  					path = path + "/";
+										  					nodes[j] = path;
+										  					j++;
+										  				}
+										  				var done = 0;
+										  				for (var i=nodes.length -1; i >= 0; i--) {
+										  					connection.get(nodes[i], function(result) {
+										  						if (result.success && result.data) {
+										  							console.log(tid + ':13f:' + nodes[i] + ' has zoneid ' + result.data);
+										  							done = 1;
+										  							zoneid = result.data;
+										  							new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
+										  						}
+										  					});
+										  					if (done == 1) break;
+										  				}
+										  				if (!done) {
+										  					//the aid had more than one zone, but none applied to the ref
+										  					//use no zone
+										  					console.log(tid + ':13g:No zoneid');
+										  					new_adtag = new_adtag.replace(/_SETZONE_/im,"");
+										  				}
+										  			}
+										  		}
+										  		console.log(tid + ':13h:Writing ad');
+										    	res.writeHead(200,{'Content-type':'text/html'});
+										    	res.end(new_adtag);
+										    } else {  // if aid_data.length > 2
+										    	// we don't have good data to work with, send default
+										    	//send default creative
+										    	console.log(tid + ':14:aid_data malformed');
+										    	var new_adtag = default_ad(size,basetag);
+												res.end(new_adtag);
+										    } // end if aid_data.length > 0
+									  	} else { // if result.success for connection.get aid
+									  		console.log(tid + ':15:' + aid + ' not found in memcache');
+									  		var query = "SELECT info FROM aid_info WHERE aid = " + aid;
+									  		mysqlc.query(query,function(err,rows,fields) {
+									  			if (err || !rows[0]) {
+									  				console.log(tid + ':15a:' + aid + 'not found in MySQL...sending default');
+													//send default creative
+													var new_adtag = default_ad(size,basetag);
+													res.writeHead(200,{'Content-type':'text/html'});
+													res.end(new_adtag);
+									  			} else {
+									  				console.log(tid + ':15b:' + aid + ' found in MySQL');
+									  				connection.set(aid, rows[0].info, function(result) {
+									  					if (result.success) {
+									  						//worked
+									  					} else {
+									  						//didn't work
+									  					}
+									  				});
+									  				var aid_data = rows[0].info.split(":");
+											  		if (aid_data.length > 2) {
+											  			console.log(tid + ':15c:aid_data:' + rows[0].info + ' is good');
+											    		var siteid = aid_data[0];
+												  		var zoneid = aid_data[1];
+												  		var apos   = aid_data[2];
+
+												  		var new_adtag = basetag;
+											  			new_adtag = new_adtag.replace(/_SIZE_/,size);
+
+												  		if (!apos && adpos) {
+												  			apos = adpos;
+												  		} else if (!apos && !adpos) {
+												  			apos = 'atf';
+												  		}
+
+												  		if (keys) {
+													  		keys = keys.replace(/["']+/g,"");
+													  		keys = keys + ',' + apos;
+													  	} else {
+													  		keys = apos;
+													  	}
+													  	new_adtag = new_adtag.replace(/_KEYWORDS_/,"ados_setKeywords('" + keys + "');");
+
+												  		if (!siteid) {
+												  			garbage = 1;
+												  		} else {
+												  			new_adtag = new_adtag.replace(/_SITEID_/im,siteid);
+												  		}
+
+												  		if (!zoneid) {
+												  			//do we check paths at this point?
+												  			//if we store all zones for an aid, then we just replace _SETZONE_ with nothing, right?
+												  			console.log(tid + ':15d:No zoneid');
+												  			new_adtag = new_adtag.replace(/_SETZONE_/im,"");
+												  		} else {
+												  			console.log(tid + ':15e:zoneid:' + zoneid);
+												  			//check to see if there is more than one zone
+												  			var zones = zoneid.split(",");
+												  			if (zones.length == 1) {
+												  				console.log(tid + ':15f:One zoneid');
+												  				new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
+												  			} else {
+												  				console.log(tid + ':15g:Multiple zoneids');
+												  				ref = ref.replace(/^http:\/\//im,"/");
+												  				ref = ref.replace(/^\/www\./im,"/");
+												  				ref = ref.replace(/[^\/]+$/im,"");
+												  				var elements = ref.split("/");
+												  				var path;
+												  				var j = 0;
+												  				var nodes;
+												  				for (var i=0; i < elements.length; i++) {
+												  					path = path + "/";
+												  					nodes[j] = path;
+												  					j++;
+												  				}
+												  				var done = 0;
+												  				for (var i=nodes.length -1; i >= 0; i--) {
+												  					connection.get(nodes[i], function(result) {
+												  						if (result.success && result.data) {
+												  							console.log(tid + ':15h:' + nodes[i] + ' has zoneid:' + result.data);
+												  							done = 1;
+												  							zoneid = result.data;
+												  							new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
+												  						}
+												  					});
+												  					if (done == 1) break;
+												  				}
+												  				if (!done) {
+												  					console.log(tid + ':15i:No zoneid');
+												  					//the aid had more than one zone, but none applied to the ref
+												  					//use no zone
+												  					new_adtag = new_adtag.replace(/_SETZONE_/im,"");
+												  				}
+												  			}
+												  		}
+												    	res.writeHead(200,{'Content-type':'text/html'});
+												    	res.end(new_adtag);
+												    } else { // if aid_data.length > 0
+												    	//send default creative
+												    	console.log(tid + ':15j:Malformed aid_data:' + rows[0].info);
+												    	var new_adtag = default_ad(size,basetag);
+														res.writeHead(200,{'Content-type':'text/html'});
+														res.end(new_adtag);
+												    } // end if aid_data.length > 0
+									  			} // end if have mysql results for aid
+									  		}); // end mysql get aid
+									  	} // end if result.success for connection.get aid
+								    }); // end connection.get aid	
+								} else { // if rows[0] else for mysql whitelist query
+									//not whitelisted for sure...
+									console.log(tid + ':16:' + host + ' not whitelisted in MySQL');
+									var pbkey = 'pb_' + aid;
+									connection.get(pbkey, function(result) {
+										if (result.success && result.data) {
+											console.log(tid + ':16a:Found passback for ' + pbkey + ' in memcached...sending');
+											res.writeHead(200,{'Content-type':'text/html'});
+											res.end(result.data);
+										} else {
+											console.log(tid + ':16b:No passback in memcached');
+											var query = 'SELECT ad FROM passbacks WHERE pb_id=\'' + pbkey + '\'';
+											console.log(tid + ':16b:pb_key:' + pbkey);
+											mysqlc.query(query,function(err,rows,fields) {
+												if (err || !rows[0]) {
+													//either we have an error or no results...send default
+													//send default creative
+													console.log(tid + ':16d:Passback not found in MySQL...sending default');
+													var new_adtag = default_ad(size,basetag);
+													res.writeHead(200,{'Content-type':'text/html'});
+													res.end(new_adtag);
+												} else {
+													console.log(tid + ':16c:Found passback for ' + pbkey + ' in MySQL...sending');
+													connection.set(pbkey,rows[0].ad,function(result) {
+														if (result.success) {
+															//added to memcache
+														} else {
+															//didn't add to memcache
+														}
+													});
+													res.writeHead(200,{'Content-type':'text/html'});
+													res.end(rows[0].ad);
+												}
+											}); // end mysql query passbacks
+										} // end if result.success pbkey
+									}); // end connection.get pbkey
+								}  // end if rows[0]
+							}); // end mysql query whitelist
+						} else { // no mysqlc...send default
+							console.log(tid + ':16d:No MySQL connection...sending default');
+							var new_adtag = default_ad(size,basetag);
+							res.writeHead(200,{'Content-type':'text/html'});
+							res.end(new_adtag);
+						}
+					} // end if result.success
+				}); // end connection.get hkey
+			} else { // else for if memcached connnection
+				console.log(tid + ':17:No memcached connection...check MySQL');
+				if (mysqlc) {
+					var query = 'SELECT flag FROM whitelist WHERE host = \'' + host + '\'';
+					mysqlc.query(query,function(err,rows,fields) {
+						if (err || !rows[0]) {
+							//check passbacks
+						} else {
+							//we have whitelisted site...
+							console.log(tid + ':17a:Site whitelisted in MySQL');
+							var query = 'SELECT info FROM aid_info WHERE aid = ' + aid;
+							mysqlc.query(query,function(err,rows,fields) {
+								if (err || !rows[0]) {
+									//send default creative
+									var new_adtag = default_ad(size,basetag);
+									res.writeHead(200,{'Content-type':'text/html'});
+									res.end(new_adtag);
+								} else {
+									//process request for aid
+
+					  				console.log(tid + ':17b:' + aid + ' found in MySQL');
+					  				connection.set(aid, rows[0].info, function(result) {
+					  					if (result.success) {
+					  						//worked
+					  					} else {
+					  						//didn't work
+					  					}
+					  				});
+					  				var aid_data = rows[0].info.split(":");
+							  		if (aid_data.length > 2) {
+							  			console.log(tid + ':17c:aid_data:' + rows[0].info + ' is good');
+							    		var siteid = aid_data[0];
+								  		var zoneid = aid_data[1];
+								  		var apos   = aid_data[2];
+
+								  		var new_adtag = basetag;
+							  			new_adtag = new_adtag.replace(/_SIZE_/,size);
+
+								  		if (!apos && adpos) {
+								  			apos = adpos;
+								  		} else if (!apos && !adpos) {
+								  			apos = 'atf';
+								  		}
+
+								  		if (keys) {
+									  		keys = keys.replace(/["']+/g,"");
+									  		keys = keys + ',' + apos;
+									  	} else {
+									  		keys = apos;
+									  	}
+									  	new_adtag = new_adtag.replace(/_KEYWORDS_/,"ados_setKeywords('" + keys + "');");
+
+								  		if (!siteid) {
+								  			garbage = 1;
+								  		} else {
+								  			new_adtag = new_adtag.replace(/_SITEID_/im,siteid);
+								  		}
+
+								  		if (!zoneid) {
+								  			//do we check paths at this point?
+								  			//if we store all zones for an aid, then we just replace _SETZONE_ with nothing, right?
+								  			console.log(tid + ':17d:No zoneid');
+								  			new_adtag = new_adtag.replace(/_SETZONE_/im,"");
+								  		} else {
+								  			console.log(tid + ':17e:zoneid:' + zoneid);
+								  			//check to see if there is more than one zone
+								  			var zones = zoneid.split(",");
+								  			if (zones.length == 1) {
+								  				console.log(tid + ':17f:One zoneid');
+								  				new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
+								  			} else {
+								  				console.log(tid + ':17g:Multiple zoneids');
+								  				ref = ref.replace(/^http:\/\//im,"/");
+								  				ref = ref.replace(/^\/www\./im,"/");
+								  				ref = ref.replace(/[^\/]+$/im,"");
+								  				var elements = ref.split("/");
+								  				var path;
+								  				var j = 0;
+								  				var nodes;
+								  				for (var i=0; i < elements.length; i++) {
+								  					path = path + "/";
+								  					nodes[j] = path;
+								  					j++;
+								  				}
+								  				var done = 0;
+								  				for (var i=nodes.length -1; i >= 0; i--) {
+								  					connection.get(nodes[i], function(result) {
+								  						if (result.success && result.data) {
+								  							console.log(tid + ':17h:' + nodes[i] + ' has zoneid:' + result.data);
+								  							done = 1;
+								  							zoneid = result.data;
+								  							new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
+								  						}
+								  					});
+								  					if (done == 1) break;
+								  				}
+								  				if (!done) {
+								  					console.log(tid + ':17i:No zoneid');
+								  					//the aid had more than one zone, but none applied to the ref
+								  					//use no zone
+								  					new_adtag = new_adtag.replace(/_SETZONE_/im,"");
+								  				}
+								  			}
+								  		}
+								    	res.writeHead(200,{'Content-type':'text/html'});
+								    	res.end(new_adtag);
+								    } else { // if aid_data.length > 0
+								    	//send default creative
+								    	console.log(tid + ':17j:Malformed aid_data:' + rows[0].info);
+								    	var new_adtag = default_ad(size,basetag);
+										res.writeHead(200,{'Content-type':'text/html'});
+										res.end(new_adtag);
+								    } // end if aid_data.length > 0
+								} //end if err or no rows for aid_info
+							}); //end if mysqlc.query for aid_info
+						} //end if mysql error or no rows for whitelist
+					}); // end of mysqlc.query for whitelist
+				} else { // else for if mysqlc
+					//send default creative
+					var new_adtag = default_ad(size,basetag);
+					res.writeHead(200,{'Content-type':'text/html'});
+					res.end(new_adtag);
+				} // end if mysqlc for whitelist query
+			} // end if connection for memcached
 	    }  // end if aid is not a number
 	}); // end of app.get
 
