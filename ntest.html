@@ -1,7 +1,8 @@
 <html>
 <head></head>
 <body>
-AID exists with one zone
+	<div style="float:left,height:275px,width:300px">
+AID exists with one zone and one keyword - show ad
 <script type="text/javascript">var localyokel_adsvr_adspace_vAppRoot="http://ec2-54-242-206-21.compute-1.amazonaws.com:8080/a";
 var localyokel_adsvr_adspace_id="668";
 var localyokel_size="300x250";
@@ -9,8 +10,32 @@ var localyokel_custom="06880";
 var localyokel_refURL="http://test.localyokelmedia.com/a/b/c.html"
 </script>
 <script type="text/javascript" src="http://ec2-54-241-47-131.us-west-1.compute.amazonaws.com:3000/lymads.js"></script>
+</div>
+	<div style="float:left,height:275px,width:300px">
 
-AID does not exist
+AID exists and has multiple zones - has sitezone entry - show ad
+<script type="text/javascript">var localyokel_adsvr_adspace_vAppRoot="http://ec2-54-242-206-21.compute-1.amazonaws.com:8080/a";
+var localyokel_adsvr_adspace_id="700";
+var localyokel_size="300x250";
+var localyokel_custom="";
+var localyokel_refURL="http://test.localyokelmedia.com/a/b/c.html"
+</script>
+<script type="text/javascript" src="http://ec2-54-241-47-131.us-west-1.compute.amazonaws.com:3000/lymads.js"></script>
+</div>
+	<div style="float:left,height:275px,width:300px">
+
+AID exists and has invalid aid_info - show default
+<script type="text/javascript">var localyokel_adsvr_adspace_vAppRoot="http://ec2-54-242-206-21.compute-1.amazonaws.com:8080/a";
+var localyokel_adsvr_adspace_id="800";
+var localyokel_size="300x250";
+var localyokel_custom="";
+var localyokel_refURL="http://test.localyokelmedia.com/a/b/c.html"
+</script>
+<script type="text/javascript" src="http://ec2-54-241-47-131.us-west-1.compute.amazonaws.com:3000/lymads.js"></script>
+</div>
+	<div style="float:left,height:275px,width:300px">
+
+AID does not exist - show default
 <script type="text/javascript">var localyokel_adsvr_adspace_vAppRoot="http://ec2-54-242-206-21.compute-1.amazonaws.com:8080/a";
 var localyokel_adsvr_adspace_id="671";
 var localyokel_size="300x250";
@@ -18,8 +43,21 @@ var localyokel_custom="";
 var localyokel_refURL="http://test.localyokelmedia.com/a/b/c.html"
 </script>
 <script type="text/javascript" src="http://ec2-54-241-47-131.us-west-1.compute.amazonaws.com:3000/lymads.js"></script>
+</div>
+	<div style="float:left,height:275px,width:300px">
 
-Referrer is not whitelisted...check for passback
+AID not a number - show default
+<script type="text/javascript">var localyokel_adsvr_adspace_vAppRoot="http://ec2-54-242-206-21.compute-1.amazonaws.com:8080/a";
+var localyokel_adsvr_adspace_id="xxx";
+var localyokel_size="300x250";
+var localyokel_custom="";
+var localyokel_refURL="http://test.localyokelmedia.com/a/b/c.html"
+</script>
+<script type="text/javascript" src="http://ec2-54-241-47-131.us-west-1.compute.amazonaws.com:3000/lymads.js"></script>
+</div>
+	<div style="float:left,height:275px,width:300px">
+
+Referrer is not whitelisted - has passback - show passback
 <script type="text/javascript">var localyokel_adsvr_adspace_vAppRoot="http://ec2-54-242-206-21.compute-1.amazonaws.com:8080/a";
 var localyokel_adsvr_adspace_id="669";
 var localyokel_size="300x250";
@@ -27,15 +65,19 @@ var localyokel_custom="";
 var localyokel_refURL="http://bad.localyokelmedia.com/a/b/c.html"
 </script>
 <script type="text/javascript" src="http://ec2-54-241-47-131.us-west-1.compute.amazonaws.com:3000/lymads.js"></script>
+</div>
+	<div style="float:left,height:275px,width:300px">
 
-AID has multiple zones
+Referrer is not whitelisted - no passback - show default
 <script type="text/javascript">var localyokel_adsvr_adspace_vAppRoot="http://ec2-54-242-206-21.compute-1.amazonaws.com:8080/a";
-var localyokel_adsvr_adspace_id="670";
+var localyokel_adsvr_adspace_id="701";
 var localyokel_size="300x250";
 var localyokel_custom="";
-var localyokel_refURL="http://test.localyokelmedia.com/a/b/c.html"
+var localyokel_refURL="http://alsobad.localyokelmedia.com/a/b/c.html"
 </script>
 <script type="text/javascript" src="http://ec2-54-241-47-131.us-west-1.compute.amazonaws.com:3000/lymads.js"></script>
+</div>
+
 
 </body>
 </html>

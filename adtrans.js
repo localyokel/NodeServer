@@ -188,20 +188,22 @@ if ( cluster.isMaster ) {
 							  				new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
 							  			} else {
 							  				console.log(tid + ':5c:More than one zoneid');
-							  				ref = ref.replace(/^http:\/\//im,"/");
-							  				ref = ref.replace(/^\/www\./im,"/");
-							  				ref = ref.replace(/[^\/]+$/im,"");
+							  				ref = ref.replace(/^http:\/\//im,"");
+							  				ref = ref.replace(/^www\./im,"");
 							  				var elements = ref.split("/");
-							  				var path;
+							  				var path = "/";
+							  				console.log(tid + ':5c.a:' + elements.length);
 							  				var j = 0;
-							  				var nodes;
+							  				var nodes = new Array();
 							  				for (var i=0; i < elements.length; i++) {
-							  					path = path + "/";
-							  					nodes[j] = path;
-							  					j++;
+							  					console.log(tid + ':5c.a:' + elements[i]);
+							  					path = path + elements[i] + '/';
+							  					nodes[i] = path;
+							  					console.log(tid + ':5c.ab:' + nodes[i]);
 							  				}
 							  				var done = 0;
 							  				for (var i=nodes.length -1; i >= 0; i--) {
+							  					console.log(tid + ':5c.b:' + nodes[i]);
 							  					connection.get(nodes[i], function(result) {
 							  						if (result.success && result.data) {
 							  							console.log(tid + ':5d:' + nodes[i] + ' has zoneid');
@@ -311,17 +313,18 @@ if ( cluster.isMaster ) {
 										  				new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
 										  			} else {
 										  				console.log(tid + ':9e:More than one zone');
-										  				ref = ref.replace(/^http:\/\//im,"/");
-										  				ref = ref.replace(/^\/www\./im,"/");
-										  				ref = ref.replace(/[^\/]+$/im,"");
+										  				ref = ref.replace(/^http:\/\//im,"");
+										  				ref = ref.replace(/^www\./im,"");
 										  				var elements = ref.split("/");
-										  				var path;
+										  				var path = "/";
+										  				console.log(tid + ':5c.a:' + elements.length);
 										  				var j = 0;
-										  				var nodes;
+										  				var nodes = new Array();
 										  				for (var i=0; i < elements.length; i++) {
-										  					path = path + "/";
-										  					nodes[j] = path;
-										  					j++;
+										  					console.log(tid + ':5c.a:' + elements[i]);
+										  					path = path + elements[i] + '/';
+										  					nodes[i] = path;
+										  					console.log(tid + ':5c.ab:' + nodes[i]);
 										  				}
 										  				var done = 0;
 										  				for (var i=nodes.length -1; i >= 0; i--) {
@@ -445,17 +448,18 @@ if ( cluster.isMaster ) {
 										  				new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
 										  			} else {
 										  				console.log(tid + ':13e:Multiple zoneids')
-										  				ref = ref.replace(/^http:\/\//im,"/");
-										  				ref = ref.replace(/^\/www\./im,"/");
-										  				ref = ref.replace(/[^\/]+$/im,"");
+										  				ref = ref.replace(/^http:\/\//im,"");
+										  				ref = ref.replace(/^www\./im,"");
 										  				var elements = ref.split("/");
-										  				var path;
+										  				var path = "/";
+										  				console.log(tid + ':5c.a:' + elements.length);
 										  				var j = 0;
-										  				var nodes;
+										  				var nodes = new Array();
 										  				for (var i=0; i < elements.length; i++) {
-										  					path = path + "/";
-										  					nodes[j] = path;
-										  					j++;
+										  					console.log(tid + ':5c.a:' + elements[i]);
+										  					path = path + elements[i] + '/';
+										  					nodes[i] = path;
+										  					console.log(tid + ':5c.ab:' + nodes[i]);
 										  				}
 										  				var done = 0;
 										  				for (var i=nodes.length -1; i >= 0; i--) {
@@ -568,17 +572,18 @@ if ( cluster.isMaster ) {
 												  				new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
 												  			} else {
 												  				console.log(tid + ':15g:Multiple zoneids');
-												  				ref = ref.replace(/^http:\/\//im,"/");
-												  				ref = ref.replace(/^\/www\./im,"/");
-												  				ref = ref.replace(/[^\/]+$/im,"");
+												  				ref = ref.replace(/^http:\/\//im,"");
+												  				ref = ref.replace(/^www\./im,"");
 												  				var elements = ref.split("/");
-												  				var path;
+												  				var path = "/";
+												  				console.log(tid + ':5c.a:' + elements.length);
 												  				var j = 0;
-												  				var nodes;
+												  				var nodes = new Array();
 												  				for (var i=0; i < elements.length; i++) {
-												  					path = path + "/";
-												  					nodes[j] = path;
-												  					j++;
+												  					console.log(tid + ':5c.a:' + elements[i]);
+												  					path = path + elements[i] + '/';
+												  					nodes[i] = path;
+												  					console.log(tid + ':5c.ab:' + nodes[i]);
 												  				}
 												  				var done = 0;
 												  				for (var i=nodes.length -1; i >= 0; i--) {
@@ -752,17 +757,18 @@ if ( cluster.isMaster ) {
 								  				new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
 								  			} else {
 								  				console.log(tid + ':17h:Multiple zoneids');
-								  				ref = ref.replace(/^http:\/\//im,"/");
-								  				ref = ref.replace(/^\/www\./im,"/");
-								  				ref = ref.replace(/[^\/]+$/im,"");
+								  				ref = ref.replace(/^http:\/\//im,"");
+								  				ref = ref.replace(/^www\./im,"");
 								  				var elements = ref.split("/");
-								  				var path;
+								  				var path = "/";
+								  				console.log(tid + ':5c.a:' + elements.length);
 								  				var j = 0;
-								  				var nodes;
+								  				var nodes = new Array();
 								  				for (var i=0; i < elements.length; i++) {
-								  					path = path + "/";
-								  					nodes[j] = path;
-								  					j++;
+								  					console.log(tid + ':5c.a:' + elements[i]);
+								  					path = path + elements[i] + '/';
+								  					nodes[i] = path;
+								  					console.log(tid + ':5c.ab:' + nodes[i]);
 								  				}
 								  				var done = 0;
 								  				for (var i=nodes.length -1; i >= 0; i--) {
