@@ -208,6 +208,24 @@ if ( cluster.isMaster ) {
 							  							done = 1;
 							  							zoneid = result.data;
 							  							new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
+							  						} else {
+							  							var query = 'SELECT zoneid FROM sitezones WHERE url=\'' + nodes[i] + '\'';
+							  							mysqlc.query(query,function(err,rows,fields) {
+							  								if (err || !rows[0]) {
+							  									//no zoned in mysql...
+							  								} else {
+							  									console.log(tid + ':5d.a:' + nodes[i] + ' has zoneid:' + rows[0].zoneid);
+							  									done = 1;
+							  									new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + rows[0].zoneid + ")");
+							  									connection.set(nodes[i],rows[0].zoneid,function(result) {
+							  										if (result.success) {
+							  											console.log(tid + ':5d.b:Added path/zone to memcached');
+							  										} else {
+							  											console.log(tid + ':5d.c:Couldn\'t add path/zone to memcached');
+							  										}
+							  									});
+							  								}
+							  							});
 							  						}
 							  					});
 							  					if (done == 1) break;
@@ -224,9 +242,10 @@ if ( cluster.isMaster ) {
 							    	res.writeHead(200,{'Content-type':'text/html'});
 							    	res.end(new_adtag);
 							    } else {
-							    	console.log(tid + ':6:Invalid aid data' + result.data);
+							    	console.log(tid + ':6:Invalid aid data' + result.data + ', Writing ad(default)');
+							    	var new_adtag = default_ad(size,basetag);
 							    	res.writeHead(200,{'Content-type':'text/html'});
-							    	res.end();
+							    	res.end(new_adtag);
 							    }
 						  	} else {
 						  		console.log(tid + ':7:' + aid + ' not found in memcached');
@@ -234,7 +253,7 @@ if ( cluster.isMaster ) {
 							  		var query = "SELECT info FROM aid_info WHERE aid = " + aid;
 							  		mysqlc.query(query,function(err,rows,fields) {
 							  			if (err || !rows[0]) {
-							  				console.log(tid + ':8:' + aid + ' not found in MySQL...sending default');
+							  				console.log(tid + ':8:' + aid + ' not found in MySQL...Writing ad(default)');
 											//send default creative
 											var new_adtag = default_ad(size,basetag);
 											res.writeHead(200,{'Content-type':'text/html'});
@@ -312,6 +331,24 @@ if ( cluster.isMaster ) {
 										  							done = 1;
 										  							zoneid = result.data;
 										  							new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
+										  						} else {
+										  							var query = 'SELECT zoneid FROM sitezones WHERE url=\'' + nodes[i] + '\'';
+										  							mysqlc.query(query,function(err,rows,fields) {
+										  								if (err || !rows[0]) {
+										  									//no zoned in mysql...
+										  								} else {
+										  									console.log(tid + ':9f.a:' + nodes[i] + ' has zoneid:' + rows[0].zoneid);
+										  									done = 1;
+										  									new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + rows[0].zoneid + ")");
+										  									connection.set(nodes[i],rows[0].zoneid,function(result) {
+										  										if (result.success) {
+										  											console.log(tid + '9f.b:Added path/zone to memcached');
+										  										} else {
+										  											console.log(tid + '9f.c:Couldn\'t add path/zone to memcached');
+										  										}
+										  									});
+										  								}
+										  							});
 										  						}
 										  					});
 										  					if (done == 1) break;
@@ -329,7 +366,7 @@ if ( cluster.isMaster ) {
 										    	res.end(new_adtag);
 										    } else {
 										    	//send default creative
-										    	console.log(tid + ':10:aid_data:' + rows[0].info + ' is malformed');
+										    	console.log(tid + ':10:aid_data:' + rows[0].info + ' is malformed...Writing ad(default)');
 										    	var new_adtag = default_ad(size,basetag);
 												res.writeHead(200,{'Content-type':'text/html'});
 												res.end(new_adtag);
@@ -338,7 +375,7 @@ if ( cluster.isMaster ) {
 							  		}); // end mysql get aid
 								} else {
 									//no mysql connection...
-									console.log(tid + ':10a:No MySQL connection...serving default');
+									console.log(tid + ':10a:No MySQL connection...Writing ad(default)');
 									var new_adtag = default_ad(size,basetag);
 									res.writeHead(200,{'Content-type':'text/html'});
 									res.end(new_adtag);
@@ -428,6 +465,24 @@ if ( cluster.isMaster ) {
 										  							done = 1;
 										  							zoneid = result.data;
 										  							new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
+										  						} else {
+									  								var query = 'SELECT zoneid FROM sitezones WHERE url=\'' + nodes[i] + '\'';
+										  							mysqlc.query(query,function(err,rows,fields) {
+										  								if (err || !rows[0]) {
+										  									//no zoned in mysql...
+										  								} else {
+										  									console.log(tid + ':13f.a:' + nodes[i] + ' has zoneid:' + rows[0].zoneid);
+										  									done = 1;
+										  									new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + rows[0].zoneid + ")");
+										  									connection.set(nodes[i],rows[0].zoneid,function(result) {
+										  										if (result.success) {
+										  											console.log(tid + ':13f.b:Added path/zone to memcached');
+										  										} else {
+										  											console.log(tid + ':13f.c:Couldn\'t add path/zone to memcached');
+										  										}
+										  									});
+										  								}
+										  							});
 										  						}
 										  					});
 										  					if (done == 1) break;
@@ -446,7 +501,7 @@ if ( cluster.isMaster ) {
 										    } else {  // if aid_data.length > 2
 										    	// we don't have good data to work with, send default
 										    	//send default creative
-										    	console.log(tid + ':14:aid_data malformed');
+										    	console.log(tid + ':14:aid_data malformed...Writing ad(default)');
 										    	var new_adtag = default_ad(size,basetag);
 												res.end(new_adtag);
 										    } // end if aid_data.length > 0
@@ -455,7 +510,7 @@ if ( cluster.isMaster ) {
 									  		var query = "SELECT info FROM aid_info WHERE aid = " + aid;
 									  		mysqlc.query(query,function(err,rows,fields) {
 									  			if (err || !rows[0]) {
-									  				console.log(tid + ':15a:' + aid + 'not found in MySQL...sending default');
+									  				console.log(tid + ':15a:' + aid + 'not found in MySQL...Writing ad(default)');
 													//send default creative
 													var new_adtag = default_ad(size,basetag);
 													res.writeHead(200,{'Content-type':'text/html'});
@@ -533,6 +588,24 @@ if ( cluster.isMaster ) {
 												  							done = 1;
 												  							zoneid = result.data;
 												  							new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
+												  						} else {
+												  							var query = 'SELECT zoneid FROM sitezones WHERE url=\'' + nodes[i] + '\'';
+												  							mysqlc.query(query,function(err,rows,fields) {
+												  								if (err || !rows[0]) {
+												  									//no zoned in mysql...
+												  								} else {
+												  									console.log(tid + ':15h.a:' + nodes[i] + ' has zoneid:' + rows[0].zoneid);
+												  									done = 1;
+												  									new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + rows[0].zoneid + ")");
+												  									connection.set(nodes[i],rows[0].zoneid,function(result) {
+												  										if (result.success) {
+												  											console.log(tid + ':15h.b:Added path/zone to memcached');
+												  										} else {
+												  											console.log(tid + ':15h.c:Couldn\'t add path/zone to memcached');
+												  										}
+												  									});
+												  								}
+												  							});
 												  						}
 												  					});
 												  					if (done == 1) break;
@@ -545,11 +618,12 @@ if ( cluster.isMaster ) {
 												  				}
 												  			}
 												  		}
+												  		console.log(tid + ':15j:Writing ad');
 												    	res.writeHead(200,{'Content-type':'text/html'});
 												    	res.end(new_adtag);
 												    } else { // if aid_data.length > 0
 												    	//send default creative
-												    	console.log(tid + ':15j:Malformed aid_data:' + rows[0].info);
+												    	console.log(tid + ':15j:Malformed aid_data:' + rows[0].info + ', Writing ad(default)');
 												    	var new_adtag = default_ad(size,basetag);
 														res.writeHead(200,{'Content-type':'text/html'});
 														res.end(new_adtag);
@@ -564,7 +638,7 @@ if ( cluster.isMaster ) {
 									var pbkey = 'pb_' + aid;
 									connection.get(pbkey, function(result) {
 										if (result.success && result.data) {
-											console.log(tid + ':16a:Found passback for ' + pbkey + ' in memcached...sending');
+											console.log(tid + ':16a:Found passback for ' + pbkey + ' in memcached...Writing ad');
 											res.writeHead(200,{'Content-type':'text/html'});
 											res.end(result.data);
 										} else {
@@ -575,7 +649,7 @@ if ( cluster.isMaster ) {
 												if (err || !rows[0]) {
 													//either we have an error or no results...send default
 													//send default creative
-													console.log(tid + ':16d:Passback not found in MySQL...sending default');
+													console.log(tid + ':16d:Passback not found in MySQL...Writing ad(default)');
 													var new_adtag = default_ad(size,basetag);
 													res.writeHead(200,{'Content-type':'text/html'});
 													res.end(new_adtag);
@@ -588,6 +662,7 @@ if ( cluster.isMaster ) {
 															//didn't add to memcache
 														}
 													});
+													console.log(tid + ':16d:Writing ad');
 													res.writeHead(200,{'Content-type':'text/html'});
 													res.end(rows[0].ad);
 												}
@@ -597,7 +672,7 @@ if ( cluster.isMaster ) {
 								}  // end if rows[0]
 							}); // end mysql query whitelist
 						} else { // no mysqlc...send default
-							console.log(tid + ':16d:No MySQL connection...sending default');
+							console.log(tid + ':16e:No MySQL connection...Writing ad(default)');
 							var new_adtag = default_ad(size,basetag);
 							res.writeHead(200,{'Content-type':'text/html'});
 							res.end(new_adtag);
@@ -618,13 +693,14 @@ if ( cluster.isMaster ) {
 							mysqlc.query(query,function(err,rows,fields) {
 								if (err || !rows[0]) {
 									//send default creative
+									console.log(tid + ':17b:aid not found in aid_info...Writing ad(default)');
 									var new_adtag = default_ad(size,basetag);
 									res.writeHead(200,{'Content-type':'text/html'});
 									res.end(new_adtag);
 								} else {
 									//process request for aid
 
-					  				console.log(tid + ':17b:' + aid + ' found in MySQL');
+					  				console.log(tid + ':17c:' + aid + ' found in MySQL');
 					  				connection.set(aid, rows[0].info, function(result) {
 					  					if (result.success) {
 					  						//worked
@@ -634,7 +710,7 @@ if ( cluster.isMaster ) {
 					  				});
 					  				var aid_data = rows[0].info.split(":");
 							  		if (aid_data.length > 2) {
-							  			console.log(tid + ':17c:aid_data:' + rows[0].info + ' is good');
+							  			console.log(tid + ':17d:aid_data:' + rows[0].info + ' is good');
 							    		var siteid = aid_data[0];
 								  		var zoneid = aid_data[1];
 								  		var apos   = aid_data[2];
@@ -665,17 +741,17 @@ if ( cluster.isMaster ) {
 								  		if (!zoneid) {
 								  			//do we check paths at this point?
 								  			//if we store all zones for an aid, then we just replace _SETZONE_ with nothing, right?
-								  			console.log(tid + ':17d:No zoneid');
+								  			console.log(tid + ':17e:No zoneid');
 								  			new_adtag = new_adtag.replace(/_SETZONE_/im,"");
 								  		} else {
-								  			console.log(tid + ':17e:zoneid:' + zoneid);
+								  			console.log(tid + ':17f:zoneid:' + zoneid);
 								  			//check to see if there is more than one zone
 								  			var zones = zoneid.split(",");
 								  			if (zones.length == 1) {
-								  				console.log(tid + ':17f:One zoneid');
+								  				console.log(tid + ':17g:One zoneid');
 								  				new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
 								  			} else {
-								  				console.log(tid + ':17g:Multiple zoneids');
+								  				console.log(tid + ':17h:Multiple zoneids');
 								  				ref = ref.replace(/^http:\/\//im,"/");
 								  				ref = ref.replace(/^\/www\./im,"/");
 								  				ref = ref.replace(/[^\/]+$/im,"");
@@ -692,27 +768,46 @@ if ( cluster.isMaster ) {
 								  				for (var i=nodes.length -1; i >= 0; i--) {
 								  					connection.get(nodes[i], function(result) {
 								  						if (result.success && result.data) {
-								  							console.log(tid + ':17h:' + nodes[i] + ' has zoneid:' + result.data);
+								  							console.log(tid + ':17i:' + nodes[i] + ' has zoneid:' + result.data);
 								  							done = 1;
 								  							zoneid = result.data;
 								  							new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + zoneid + ")");
+								  						} else {
+								  							var query = 'SELECT zoneid FROM sitezones WHERE url=\'' + nodes[i] + '\'';
+								  							mysqlc.query(query,function(err,rows,fields) {
+								  								if (err || !rows[0]) {
+								  									//no zoned in mysql...
+								  								} else {
+								  									console.log(tid + ':17i.a:' + nodes[i] + ' has zoneid:' + rows[0].zoneid);
+								  									done = 1;
+								  									new_adtag = new_adtag.replace(/_SETZONE_/,".setZone(" + rows[0].zoneid + ")");
+								  									connection.set(nodes[i],rows[0].zoneid,function(result) {
+								  										if (result.success) {
+								  											console.log(tid + ':17i.b:Added path/zone to memcached');
+								  										} else {
+								  											console.log(tid + ':17i.c:Couldn\'t add path/zone to memcached');
+								  										}
+								  									});
+								  								}
+								  							});
 								  						}
 								  					});
 								  					if (done == 1) break;
 								  				}
 								  				if (!done) {
-								  					console.log(tid + ':17i:No zoneid');
+								  					console.log(tid + ':17j:No zoneid');
 								  					//the aid had more than one zone, but none applied to the ref
 								  					//use no zone
 								  					new_adtag = new_adtag.replace(/_SETZONE_/im,"");
 								  				}
 								  			}
 								  		}
+								  		console.log(tid + ':17k:Writing ad');
 								    	res.writeHead(200,{'Content-type':'text/html'});
 								    	res.end(new_adtag);
 								    } else { // if aid_data.length > 0
 								    	//send default creative
-								    	console.log(tid + ':17j:Malformed aid_data:' + rows[0].info);
+								    	console.log(tid + ':17l:Malformed aid_data:' + rows[0].info + ', Writing ad(default)');
 								    	var new_adtag = default_ad(size,basetag);
 										res.writeHead(200,{'Content-type':'text/html'});
 										res.end(new_adtag);
@@ -721,8 +816,9 @@ if ( cluster.isMaster ) {
 							}); //end if mysqlc.query for aid_info
 						} //end if mysql error or no rows for whitelist
 					}); // end of mysqlc.query for whitelist
-				} else { // else for if mysqlc
+				} else { // else for if mysql_connected
 					//send default creative
+					console.log(tid + ':17m:No MySQL connection...Writing ad(default)');
 					var new_adtag = default_ad(size,basetag);
 					res.writeHead(200,{'Content-type':'text/html'});
 					res.end(new_adtag);
