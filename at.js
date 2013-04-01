@@ -88,7 +88,7 @@ if ( cluster.isMaster ) {
 
 	// get the lymuads.js file from the server
 	app.get('/lymads.js',function(req,res) {
-        fs.readFile('./static/lymads.js',function(error,content) {
+        fs.readFile('./lymads.js',function(error,content) {
 	    //console.log('Request for lymuads.js');
         if (error) {
           res.writeHead(200,{'Content-type':'text/html'});
@@ -102,7 +102,7 @@ if ( cluster.isMaster ) {
 
     // get the adtest.html file from the server
 	app.get('/ntest.html',function(req,res) {
-        fs.readFile('./static/ntest.html',function(error,content) {
+        fs.readFile('./ntest.html',function(error,content) {
         	if (error) {
         		res.writeHead(200,{'Content-type':'text/html'});
         		res.end();
