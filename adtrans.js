@@ -66,13 +66,28 @@ if ( cluster.isMaster ) {
 	});
 
 	var basetag = '<script type="text/javascript">var ados = ados || {};ados.run = ados.run || [];ados.run.push(function() {ados_setDomain(\'engine.localyokelmedia.com\');_KEYWORDS_ados_addInlinePlacement(4413, _SITEID_, _SIZE_)_SETZONE_.setClickUrl(\'-optional-click-macro-\').loadInline();});</script><script type="text/javascript" src="http://static.localyokelmedia.com/ados.js"></script>';
+	//var basetag = '<script type="text/javascript">\
+//var p="http",d="static";if(document.location.protocol=="https:"){p+="s";d="engine";}\
+//var z=document.createElement("script");z.type="text/javascript";z.async=true;\
+//z.src=p+"://"+d+".localyokelmedia.com/ados.js";var s=document.getElementsByTagName("script")[0];\
+//s.parentNode.insertBefore(z,s);</script>\
+//<script type="text/javascript">var ados = ados || {};\
+//ados.run = ados.run || [];ados.run.push(function() {\
+//ados_add_placement(4413, _SITEID_, "azk_DIVID_", _SIZE_)_SETZONE_;\
+//_KEYWORDS_\
+//ados_setDomain(\'engine.localyokelmedia.com\');\
+//ados_load();});</script>\
+//<div id="azk_DIVID_"></div>';
 
+	
 	function default_ad(size,basetag) {
 		var new_adtag = basetag;
+		var div_id = Math.floor(Math.random()*99999);
 		new_adtag = new_adtag.replace(/_SIZE_/im,size);
 		new_adtag = new_adtag.replace(/_KEYWORDS_/im,"");
 		new_adtag = new_adtag.replace(/_SITEID_/im,"28036");
 		new_adtag = new_adtag.replace(/_SETZONE_/im,"");
+		new_adtag = new_adtag.replace(/_DIVID_/gim,div_id);
 		return new_adtag;
 	}
 
@@ -119,22 +134,25 @@ if ( cluster.isMaster ) {
 	    var keys    = req.query.keys;
 	    var ref     = req.query.ref;
 	    var garbage = 0;
+	    var div_id = Math.floor(Math.random()*99999);
 
 	    //This is the thread id for logging purposes
 	    var tid = Math.floor(Math.random()*100);
 
+		var host = ref.replace(/^http:\/\//im,"");
+	    host = host.replace(/^www\./im,"");
+	    host = host.replace(/^([^\/]+).*?$/im,"$1");
+
 	    // aid is the ad id and is only numeric
 	    var aid = req.query.aid;
 	    if (isNaN(aid)) {
-	  		console.log(tid+':1:Bad aid:'+aid);
+	  		console.log(tid+':1:Bad aid:'+aid+' for host ' + host);
 	  		//send default creative
 	  		var new_adtag = default_ad(size,basetag);
 			res.writeHead(200,{'Content-type':'text/html'});
 			res.end(new_adtag);
 	    } else {
-	    	var host = ref.replace(/^http:\/\//im,"");
-	    	host = host.replace(/^www\./im,"");
-	    	host = host.replace(/^([^\/]+).*?$/im,"$1");
+	    	
 	    	var hkey = "WL:" + host;
 	    	//first check to see if it is a whitelisted URL
 	    	if (connection) {
@@ -153,6 +171,8 @@ if ( cluster.isMaster ) {
 
 							  		var new_adtag = basetag;
 						  			new_adtag = new_adtag.replace(/_SIZE_/im,size);
+
+						  			new_adtag = new_adtag.replace(/_DIVID_/gim,div_id);
 
 							  		if (!apos && adpos) {
 							  			apos = adpos;
@@ -315,6 +335,8 @@ if ( cluster.isMaster ) {
 										  		
 										  		var new_adtag = basetag;
 									  			new_adtag = new_adtag.replace(/_SIZE_/im,size);
+
+									  			new_adtag = new_adtag.replace(/_DIVID_/gim,div_id);
 
 										  		if (!apos && adpos) {
 										  			apos = adpos;
@@ -488,6 +510,8 @@ if ( cluster.isMaster ) {
 										  		var new_adtag = basetag;
 									  			new_adtag = new_adtag.replace(/_SIZE_/im,size);
 
+									  			new_adtag = new_adtag.replace(/_DIVID_/gim,div_id);
+
 										  		if (!apos && adpos) {
 										  			apos = adpos;
 										  		} else if (!apos && !adpos) {
@@ -613,7 +637,7 @@ if ( cluster.isMaster ) {
 										    } else {  // if aid_data.length > 2
 										    	// we don't have good data to work with, send default
 										    	//send default creative
-										    	console.log(tid + ':14:aid_data malformed...Writing ad(default)');
+										    	console.log(tid + ':14:Malformed aid_data ' + result.data + ' ...Writing ad(default)');
 										    	var new_adtag = default_ad(size,basetag);
 												res.end(new_adtag);
 										    } // end if aid_data.length > 0
@@ -622,7 +646,7 @@ if ( cluster.isMaster ) {
 									  		var query = "SELECT info FROM aid_info WHERE aid = " + aid;
 									  		mysqlc.query(query,function(err,rows,fields) {
 									  			if (err || !rows[0]) {
-									  				console.log(tid + ':15a:' + aid + 'not found in MySQL...Writing ad(default)');
+									  				console.log(tid + ':15a:' + aid + ' not found in MySQL...Writing ad(default)');
 													//send default creative
 													var new_adtag = default_ad(size,basetag);
 													res.writeHead(200,{'Content-type':'text/html'});
@@ -645,6 +669,8 @@ if ( cluster.isMaster ) {
 
 												  		var new_adtag = basetag;
 											  			new_adtag = new_adtag.replace(/_SIZE_/im,size);
+
+											  			new_adtag = new_adtag.replace(/_DIVID_/gim,div_id);
 
 												  		if (!apos && adpos) {
 												  			apos = adpos;
@@ -843,7 +869,7 @@ if ( cluster.isMaster ) {
 							mysqlc.query(query,function(err,rows,fields) {
 								if (err || !rows[0]) {
 									//send default creative
-									console.log(tid + ':17b:aid not found in aid_info...Writing ad(default)');
+									console.log(tid + ':17b:aid ' + aid + ' not found for host ' + host + ' in aid_info...Writing ad(default)');
 									var new_adtag = default_ad(size,basetag);
 									res.writeHead(200,{'Content-type':'text/html'});
 									res.end(new_adtag);
@@ -867,6 +893,8 @@ if ( cluster.isMaster ) {
 
 								  		var new_adtag = basetag;
 							  			new_adtag = new_adtag.replace(/_SIZE_/im,size);
+
+							  			new_adtag = new_adtag.replace(/_DIVID_/gim,div_id);
 
 								  		if (!apos && adpos) {
 								  			apos = adpos;
