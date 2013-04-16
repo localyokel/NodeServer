@@ -12,16 +12,19 @@ if (!SizeMap[localyokel_size]) {
 function lym_ads_makeFrame() {
    var localyokel_adsvr_adspace_vAppRoot = "http://NodeBalancer-2000449350.us-west-1.elb.amazonaws.com/a";
    var lym_adsvr_div_id = "adsvr_"+localyokel_adsvr_adspace_id+"_"+Math.floor(Math.random()*999);
-   document.write('<form id="lym_adsvr_makeFrame"><div id="'+ lym_adsvr_div_id +'"></div></form>');     
-   if (!localyokel_refURL) {
-   		localyokel_refURL; if(self == top) localyokel_refURL = document.location.href; else localyokel_refURL = document.referrer;
-   		localyokel_refURL = 'http://test.localyokelmedia.com/this/is/a/test/ad.html';
+   document.write('<form id="lym_adsvr_makeFrame"><div id="'+ lym_adsvr_div_id +'"></div></form>'); 
+   var referrer;    
+   if (typeof localyokel_refURL === 'undefined') {
+   		if(self == top) referrer = document.location.href; else localyokel_refURL = document.referrer;
+   		referrer = 'http://accuweather.com/this/is/a/test/ad.html';
+   } else {
+   		referrer = localyokel_refURL;
    }
    var localyokel_width = lym_adsvr_SplitOnString(0);
    var localyokel_height = lym_adsvr_SplitOnString(1);
    var lym_zone_data = "";
    ifrm = document.createElement("IFRAME"); 
-   ifrm.setAttribute("src", localyokel_adsvr_adspace_vAppRoot +'?aid=' + localyokel_adsvr_adspace_id + '&keys=' + escape(localyokel_custom) + '&size='+localyokel_sizeid+'&adpos='+lym_adsvr_DetectPosition(lym_adsvr_div_id)+'&ref='+escape(localyokel_refURL));
+   ifrm.setAttribute("src", localyokel_adsvr_adspace_vAppRoot +'?aid=' + localyokel_adsvr_adspace_id + '&keys=' + escape(localyokel_custom) + '&size='+localyokel_sizeid+'&adpos='+lym_adsvr_DetectPosition(lym_adsvr_div_id)+'&ref='+escape(referrer));
    ifrm.style.width = localyokel_width +"px"; 
    ifrm.style.height = localyokel_height +"px";
    ifrm.id=lym_adsvr_div_id+"_iframe";

@@ -65,7 +65,24 @@ if ( cluster.isMaster ) {
 		}
 	});
 
-	var basetag = '<script type="text/javascript">var ados = ados || {};ados.run = ados.run || [];ados.run.push(function() {ados_setDomain(\'engine.localyokelmedia.com\');_KEYWORDS_ados_addInlinePlacement(4413, _SITEID_, _SIZE_)_SETZONE_.setClickUrl(\'-optional-click-macro-\').loadInline();});</script><script type="text/javascript" src="http://static.localyokelmedia.com/ados.js"></script>';
+	var basetag = '<script type="text/javascript">\
+var ados = ados || {};\
+ados.run = ados.run || [];\
+ados.run.push(function() {\
+	_KEYWORDS_\
+	ados_addInlinePlacement(5598, _SITEID_, _SIZE_)_SETZONE_.setClickUrl(\'-optional-click-macro-\').loadInline();\
+});</script>\
+<script type="text/javascript" src="http://static.adzerk.net/ados.js"></script>';
+
+//	var basetag = '<script type="text/javascript">\
+//	var ados = ados || {};\
+//	ados.run = ados.run || [];\
+//	ados.run.push(function() {\
+//		ados_setDomain(\'engine.localyokelmedia.com\');\
+//		_KEYWORDS_\
+//		ados_addInlinePlacement(4413, _SITEID_, _SIZE_)_SETZONE_.setClickUrl(\'-optional-click-macro-\').loadInline();\
+//	});</script><script type="text/javascript" src="http://static.localyokelmedia.com/ados.js"></script>';
+
 	//var basetag = '<script type="text/javascript">\
 //var p="http",d="static";if(document.location.protocol=="https:"){p+="s";d="engine";}\
 //var z=document.createElement("script");z.type="text/javascript";z.async=true;\
