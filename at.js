@@ -24,6 +24,7 @@ if ( cluster.isMaster ) {
 	  , mysql = require('mysql')
 	  , atfunc = require('./lib/atfunc.js')
 	  , memcached = require('memcachejs')
+	  , oatmeal = require('oatmeal')
 	  , cluster = require('cluster');
 
 	process.on('uncaughtException', function (err) {
@@ -126,6 +127,11 @@ ados.run.push(function() {\
 	    var adpos   = req.query.adpos;
 	    var keys    = req.query.keys;
 	    var ref     = req.query.ref;
+	    var cookie; //  = oatmeal.cookie("LYMATTARGETS");
+	    var targets = new Array();
+	    if (cookie) {
+	    	targets = cookie.split(",");
+	    }
 	    var garbage = 0;
 	    var div_id = Math.floor(Math.random()*99999);
 
@@ -160,7 +166,7 @@ ados.run.push(function() {\
 						  		if (aid_data.length > 2) {
 									var new_adtag = basetag;
 						  			
-						  			new_adtag = atfunc.setup(aid_data,new_adtag,adpos,keys,size,div_id);
+						  			new_adtag = atfunc.setup(aid_data,new_adtag,adpos,keys,size,div_id,targets);
 
 							  		new_adtag = atfunc.zones(aid_data,new_adtag,connection,mysqlc,tid);
 							  		res.writeHead(200,{'Content-type':'text/html'});
@@ -194,7 +200,7 @@ ados.run.push(function() {\
 							  				var aid_data = rows[0].info.split(":");
 									  		if (aid_data.length > 2) {
 									  			var new_adtag = basetag;
-									  			new_adtag = atfunc.setup(aid_data,new_adtag,adpos,keys,size,div_id);
+									  			new_adtag = atfunc.setup(aid_data,new_adtag,adpos,keys,size,div_id,targets);
 									    		
 										  		new_adtag = atfunc.zones(aid_data,new_adtag,connection,mysqlc,tid);
 										  		res.writeHead(200,{'Content-type':'text/html'});
@@ -239,7 +245,7 @@ ados.run.push(function() {\
 									  		var aid_data   = result.data.split(":");
 									  		if (aid_data.length > 2) {
 									  			var new_adtag = basetag;
-									  			new_adtag = atfunc.setup(aid_data,new_adtag,adpos,keys,size,div_id);
+									  			new_adtag = atfunc.setup(aid_data,new_adtag,adpos,keys,size,div_id,targets);
 			
 										  		new_adtag = atfunc.zones(aid_data,new_adtag,connection,mysqlc,tid);
 												res.writeHead(200,{'Content-type':'text/html'});
@@ -273,7 +279,7 @@ ados.run.push(function() {\
 									  				var aid_data = rows[0].info.split(":");
 											  		if (aid_data.length > 2) {
 											  			var new_adtag = basetag;
-											  			new_adtag = atfunc.setup(aid_data,new_adtag,adpos,keys,size,div_id);
+											  			new_adtag = atfunc.setup(aid_data,new_adtag,adpos,keys,size,div_id,targets);
 
 												  		new_adtag = atfunc.zones(aid_data,new_adtag,connection,mysqlc,tid);
 														res.writeHead(200,{'Content-type':'text/html'});
@@ -368,7 +374,7 @@ ados.run.push(function() {\
 					  				var aid_data = rows[0].info.split(":");
 							  		if (aid_data.length > 2) {
 							  			var new_adtag = basetag;
-							  			new_adtag = atfunc.setup(aid_data,new_adtag,adpos,keys,size,div_id);
+							  			new_adtag = atfunc.setup(aid_data,new_adtag,adpos,keys,size,div_id,targets);
 
 								  		new_adtag = atfunc.zones(aid_data,new_adtag,connection,mysqlc,tid);
 										res.writeHead(200,{'Content-type':'text/html'});
