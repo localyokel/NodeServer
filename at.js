@@ -22,9 +22,9 @@ if ( cluster.isMaster ) {
 	  , path = require('path')
 	  , fs = require('fs')
 	  , mysql = require('mysql')
+	  , swig = require('swig')
 	  , atfunc = require('./lib/atfunc.js')
 	  , memcached = require('memcachejs')
-	  , oatmeal = require('oatmeal')
 	  , cluster = require('cluster');
 
 	process.on('uncaughtException', function (err) {
@@ -66,12 +66,12 @@ if ( cluster.isMaster ) {
 		}
 	});
 
-	var basetag = '<script type="text/javascript">\
+	var tag = '<script type="text/javascript">\
 var ados = ados || {};\
 ados.run = ados.run || [];\
 ados.run.push(function() {\
-	_KEYWORDS_\
-	ados_addInlinePlacement(5598, _SITEID_, _SIZE_)_SETZONE_.setClickUrl(\'-optional-click-macro-\').loadInline();\
+_KEYWORDS_\
+ados_addInlinePlacement(5598, _SITEID_, _SIZE_)_SETZONE_.setClickUrl("-optional-click-macro-").loadInline();\
 });</script>\
 <script type="text/javascript" src="http://static.adzerk.net/ados.js"></script>';
 
@@ -95,9 +95,48 @@ ados.run.push(function() {\
 	  res.end();
 	});
 
+	app.get('/help', function(req,res) {
+		var key = req.query.key;
+		if (key === undefined || key != 'attakmule') {
+			res.writeHead(200,{'Content-type':'text/html'});
+			res.end();
+		} else {
+			var tmpl = swig.compileFile(__dirname + '/templates/help.html');
+	        var renderedHtml = tmpl.render({});
+	        res.writeHead(200,{'Content-type':'text/html'});
+	        res.end(renderedHtml);
+	    }
+	});
+
 	// get the lymuads.js file from the server
 	app.get('/lymads.js',function(req,res) {
         fs.readFile('./static/lymads.js',function(error,content) {
+	    //console.log('Request for lymuads.js');
+        if (error) {
+          res.writeHead(200,{'Content-type':'text/html'});
+          res.end();
+        } else {
+          res.writeHead(200,{'Content-type':'text/html'});
+          res.end(content,'utf-8');
+        }
+      });
+    });
+
+	app.get('/lymads.js.src.js',function(req,res) {
+        fs.readFile('./static/lymads.js.src.js',function(error,content) {
+	    //console.log('Request for lymuads.js');
+        if (error) {
+          res.writeHead(200,{'Content-type':'text/html'});
+          res.end();
+        } else {
+          res.writeHead(200,{'Content-type':'text/html'});
+          res.end(content,'utf-8');
+        }
+      });
+    });
+
+    app.get('/lymnads.js',function(req,res) {
+        fs.readFile('./static/lymnads.js',function(error,content) {
 	    //console.log('Request for lymuads.js');
         if (error) {
           res.writeHead(200,{'Content-type':'text/html'});
@@ -127,17 +166,23 @@ ados.run.push(function() {\
 	    var adpos   = req.query.adpos;
 	    var keys    = req.query.keys;
 	    var ref     = req.query.ref;
-	    var cookie; //  = oatmeal.cookie("LYMATTARGETS");
-	    var targets = new Array();
-	    if (cookie) {
-	    	targets = cookie.split(",");
-	    }
+	    var type    = req.query.type;
 	    var garbage = 0;
-	    var div_id = Math.floor(Math.random()*99999);
+
+	    var basetag;
+	    console.log("TYPE:" + type);
+	    if (type == "iframe") {
+	    	basetag = tag;
+	    } else {
+	    	basetag = 'document.write(\'' + tag + '\');';
+	    }
 
 	    //This is the thread id for logging purposes
 	    var tid = Math.floor(Math.random()*100);
 
+	    if (ref == undefined) {
+	    	ref = 'http://test.localyokelmedia.com';
+	    }
 		var host = ref.replace(/^http:\/\//im,"");
 	    host = host.replace(/^www\./im,"");
 	    host = host.replace(/^([^\/]+).*?$/im,"$1");
@@ -145,7 +190,7 @@ ados.run.push(function() {\
 	    // aid is the ad id and is only numeric
 	    var aid = req.query.aid;
 	    if (isNaN(aid)) {
-	  		console.log(tid+':1:Bad aid:'+aid+' for host ' + host);
+	  		console.log(tid + ':1:' + aid + ':' + host + '::Invalid aid:Sending Default');
 	  		//send default creative
 	  		var new_adtag = atfunc.default_ad(size,basetag);
 			res.writeHead(200,{'Content-type':'text/html'});
@@ -158,38 +203,38 @@ ados.run.push(function() {\
 		    	connection.get(hkey,function(result) {
 		    		if (result.success && result.data) {
 		    			//now check for its memcache aid entry
-					    console.log(tid+':2:' + host + ' is whitelisted');
+					    //console.log(tid+':2:' + host + ' is whitelisted');
 					    connection.get(aid, function(result) {
 						  	if (result.success && result.data) {
-						  		console.log(tid + ':3:' + aid + ' found in memcached');
+						  		//console.log(tid + ':3:' + aid + ' found in memcached');
 						  		var aid_data   = result.data.split(":");
 						  		if (aid_data.length > 2) {
 									var new_adtag = basetag;
 						  			
-						  			new_adtag = atfunc.setup(aid_data,new_adtag,adpos,keys,size,div_id,targets);
+						  			new_adtag = atfunc.setup(aid_data,new_adtag,adpos,keys,size,req,res);
 
 							  		new_adtag = atfunc.zones(aid_data,new_adtag,connection,mysqlc,tid);
 							  		res.writeHead(200,{'Content-type':'text/html'});
 							  		res.end(new_adtag);
 							    } else {
-							    	console.log(tid + ':6:Invalid aid data' + result.data + ', Writing ad(default)');
+							    	console.log(tid + ':6:' + aid + ':' + host + ':' + result.data + ':Invalid aid data:Sending Default');
 							    	var new_adtag = atfunc.default_ad(size,basetag);
 							    	res.writeHead(200,{'Content-type':'text/html'});
 							    	res.end(new_adtag);
 							    }
 						  	} else {
-						  		console.log(tid + ':7:' + aid + ' not found in memcached');
+						  		//console.log(tid + ':7:' + aid + ' not found in memcached');
 						  		if (mysql_connected) {
 							  		var query = "SELECT info FROM aid_info WHERE aid = " + aid;
 							  		mysqlc.query(query,function(err,rows,fields) {
 							  			if (err || !rows[0]) {
-							  				console.log(tid + ':8:' + aid + ' not found in MySQL...Writing ad(default)');
+							  				console.log(tid + ':8:' + aid + ':' + host + ':' + err + ':aid not found in MySQL or error:Sending Default');
 											//send default creative
 											var new_adtag = atfunc.default_ad(size,basetag);
 											res.writeHead(200,{'Content-type':'text/html'});
 											res.end(new_adtag);
 							  			} else {
-							  				console.log(tid + ':9:' + aid + ' found in MySQL');
+							  				//console.log(tid + ':9:' + aid + ' found in MySQL');
 							  				connection.set(aid, rows[0].info, function(result) {
 							  					if (result.success) {
 							  						//worked
@@ -200,14 +245,14 @@ ados.run.push(function() {\
 							  				var aid_data = rows[0].info.split(":");
 									  		if (aid_data.length > 2) {
 									  			var new_adtag = basetag;
-									  			new_adtag = atfunc.setup(aid_data,new_adtag,adpos,keys,size,div_id,targets);
+									  			new_adtag = atfunc.setup(aid_data,new_adtag,adpos,keys,size,req,res);
 									    		
 										  		new_adtag = atfunc.zones(aid_data,new_adtag,connection,mysqlc,tid);
 										  		res.writeHead(200,{'Content-type':'text/html'});
 												res.end(new_adtag);
 										    } else {
 										    	//send default creative
-										    	console.log(tid + ':10:aid_data:' + rows[0].info + ' is malformed...Writing ad(default)');
+										    	console.log(tid + ':9:' + aid + ':' + host + ':' + rows[0].info + ':Invalid aid data:Sending Default');
 										    	var new_adtag = default_ad(size,basetag);
 												res.writeHead(200,{'Content-type':'text/html'});
 												res.end(new_adtag);
@@ -216,7 +261,7 @@ ados.run.push(function() {\
 							  		}); // end mysql get aid
 								} else {
 									//no mysql connection...
-									console.log(tid + ':10a:No MySQL connection...Writing ad(default)');
+									console.log(tid + ':10a:No MySQL connection...Sending default');
 									var new_adtag = atfunc.default_ad(size,basetag);
 									res.writeHead(200,{'Content-type':'text/html'});
 									res.end(new_adtag);
@@ -225,12 +270,12 @@ ados.run.push(function() {\
 					    }); // end connection.get aid
 					} else { // if result.success for connection.get hkey else for no results
 						//check mysql to see if site is whitelisted
-						console.log(tid + ':11:' +  host + ' not whitelisted in memcached');
+						//console.log(tid + ':11:' +  host + ' not whitelisted in memcached');
 						if (mysql_connected) {
 							var query = 'SELECT flag FROM whitelist WHERE host = \'' + host + '\'';
 							mysqlc.query(query,function(err,rows,fields) {
 								if (rows[0]) {
-									console.log(tid + ':12:' + host + ' is whitelisted in MySQL');
+									//console.log(tid + ':12:' + host + ' is whitelisted in MySQL');
 									//site is whitelisted...go through the whole routine
 									connection.set(hkey,'1',function(result) {
 										if (result.success) {
@@ -241,11 +286,11 @@ ados.run.push(function() {\
 					    			//now check for its memcache aid entry
 								    connection.get(aid, function(result) {
 									  	if (result.success && result.data) {
-									  		console.log(tid + ':13:' + aid + ' found in memcached');
+									  		//console.log(tid + ':13:' + aid + ' found in memcached');
 									  		var aid_data   = result.data.split(":");
-									  		if (aid_data.length > 2) {
+									  		if (aid_data.length > 2 && aid_data[0] != "") {
 									  			var new_adtag = basetag;
-									  			new_adtag = atfunc.setup(aid_data,new_adtag,adpos,keys,size,div_id,targets);
+									  			new_adtag = atfunc.setup(aid_data,new_adtag,adpos,keys,size,req,res);
 			
 										  		new_adtag = atfunc.zones(aid_data,new_adtag,connection,mysqlc,tid);
 												res.writeHead(200,{'Content-type':'text/html'});
@@ -253,22 +298,21 @@ ados.run.push(function() {\
 										    } else {  // if aid_data.length > 2
 										    	// we don't have good data to work with, send default
 										    	//send default creative
-										    	console.log(tid + ':14:Malformed aid_data ' + result.data + ' ...Writing ad(default)');
+										    	console.log(tid + ':14:' + aid + ':' + host + ':' + result.data + ':Invalid aid data:Sending Default');
 										    	var new_adtag = atfunc.default_ad(size,basetag);
 												res.end(new_adtag);
 										    } // end if aid_data.length > 0
 									  	} else { // if result.success for connection.get aid
-									  		console.log(tid + ':15:' + aid + ' not found in memcache');
+									  		//console.log(tid + ':15:' + aid + ' not found in memcache');
 									  		var query = "SELECT info FROM aid_info WHERE aid = " + aid;
 									  		mysqlc.query(query,function(err,rows,fields) {
 									  			if (err || !rows[0]) {
-									  				console.log(tid + ':15a:' + aid + ' not found in MySQL...Writing ad(default)');
-													//send default creative
-													var new_adtag = atfunc.default_ad(size,basetag);
+									  				console.log(tid + ':15a:' + aid + ':' + host + ':' + err + ':aid not found in MySQL or error:Sending Default'); 
+									  				var new_adtag = atfunc.default_ad(size,basetag);
 													res.writeHead(200,{'Content-type':'text/html'});
 													res.end(new_adtag);
 									  			} else {
-									  				console.log(tid + ':15b:' + aid + ' found in MySQL');
+									  				//console.log(tid + ':15b:' + aid + ' found in MySQL');
 									  				connection.set(aid, rows[0].info, function(result) {
 									  					if (result.success) {
 									  						//worked
@@ -277,16 +321,16 @@ ados.run.push(function() {\
 									  					}
 									  				});
 									  				var aid_data = rows[0].info.split(":");
-											  		if (aid_data.length > 2) {
+											  		if (aid_data.length > 2 && aid_data[0] != "") {
 											  			var new_adtag = basetag;
-											  			new_adtag = atfunc.setup(aid_data,new_adtag,adpos,keys,size,div_id,targets);
+											  			new_adtag = atfunc.setup(aid_data,new_adtag,adpos,keys,size,req,res);
 
 												  		new_adtag = atfunc.zones(aid_data,new_adtag,connection,mysqlc,tid);
 														res.writeHead(200,{'Content-type':'text/html'});
 														res.end(new_adtag);
 												    } else { // if aid_data.length > 0
 												    	//send default creative
-												    	console.log(tid + ':15j:Malformed aid_data:' + rows[0].info + ', Writing ad(default)');
+												    	console.log(tid + ':15j:' + aid + ':' + host + ':' + rows[0].info + ':Invalid aid data:Sending Default');
 												    	var new_adtag = atfunc.default_ad(size,basetag);
 														res.writeHead(200,{'Content-type':'text/html'});
 														res.end(new_adtag);
@@ -297,11 +341,11 @@ ados.run.push(function() {\
 								    }); // end connection.get aid	
 								} else { // if rows[0] else for mysql whitelist query
 									//not whitelisted for sure...
-									console.log(tid + ':16:' + host + ' not whitelisted in MySQL');
+									console.log(tid + ':16:' + aid + ':' + host + '::Not whitelisted in MySQL');
 									var pbkey = 'pb_' + aid;
 									connection.get(pbkey, function(result) {
 										if (result.success && result.data) {
-											console.log(tid + ':16a:Found passback for ' + pbkey + ' in memcached...Writing ad');
+											//console.log(tid + ':16a:Found passback for ' + pbkey + ' in memcached...Writing ad');
 											res.writeHead(200,{'Content-type':'text/html'});
 											res.end(result.data);
 										} else {
@@ -312,12 +356,12 @@ ados.run.push(function() {\
 												if (err || !rows[0]) {
 													//either we have an error or no results...send default
 													//send default creative
-													console.log(tid + ':16d:Passback not found in MySQL...Writing ad(default)');
+													console.log(tid + ':16d:' + aid + ':' + host + '::Passback not found in MySQL:Sending Default');
 													var new_adtag = atfunc.default_ad(size,basetag);
 													res.writeHead(200,{'Content-type':'text/html'});
 													res.end(new_adtag);
 												} else {
-													console.log(tid + ':16c:Found passback for ' + pbkey + ' in MySQL...sending');
+													//console.log(tid + ':16c:Found passback for ' + pbkey + ' in MySQL...sending');
 													connection.set(pbkey,rows[0].ad,function(result) {
 														if (result.success) {
 															//added to memcache
@@ -325,7 +369,7 @@ ados.run.push(function() {\
 															//didn't add to memcache
 														}
 													});
-													console.log(tid + ':16d:Writing ad');
+													//console.log(tid + ':16d:Writing ad');
 													res.writeHead(200,{'Content-type':'text/html'});
 													res.end(rows[0].ad);
 												}
@@ -348,40 +392,40 @@ ados.run.push(function() {\
 					var query = 'SELECT flag FROM whitelist WHERE host = \'' + host + '\'';
 					mysqlc.query(query,function(err,rows,fields) {
 						if (err || !rows[0]) {
-							//check passbacks
+							console.log(tid+':17a:' + aid + ':' + host + '::Not whitelisted in MySQL:Sending Default');
+							var new_adtag = atfunc.default_ad(size,basetag);
+							res.writeHead(200,{'Content-type':'text/html'});
+							res.end(new_adtag);
 						} else {
 							//we have whitelisted site...
-							console.log(tid + ':17a:Site whitelisted in MySQL');
+							//console.log(tid + ':17a:Site whitelisted in MySQL');
 							var query = 'SELECT info FROM aid_info WHERE aid = ' + aid;
 							mysqlc.query(query,function(err,rows,fields) {
 								if (err || !rows[0]) {
 									//send default creative
-									console.log(tid + ':17b:aid ' + aid + ' not found for host ' + host + ' in aid_info...Writing ad(default)');
+									console.log(tid + ':17b:' + aid + ':' + host + ':' + err + ':aid not found in MySQL or error::Sending Default');
 									var new_adtag = atfunc.default_ad(size,basetag);
 									res.writeHead(200,{'Content-type':'text/html'});
 									res.end(new_adtag);
 								} else {
-									//process request for aid
-
-					  				console.log(tid + ':17c:' + aid + ' found in MySQL');
-					  				connection.set(aid, rows[0].info, function(result) {
-					  					if (result.success) {
-					  						//worked
-					  					} else {
-					  						//didn't work
-					  					}
-					  				});
 					  				var aid_data = rows[0].info.split(":");
 							  		if (aid_data.length > 2) {
+							  			//console.log(tid + ':17c:' + aid + ' found in MySQL');
+					  					connection.set(aid, rows[0].info, function(result) {
+					  						if (result.success) {
+					  							//worked
+					  						} else {
+					  							//didn't work
+					  						}
+					  					});
 							  			var new_adtag = basetag;
-							  			new_adtag = atfunc.setup(aid_data,new_adtag,adpos,keys,size,div_id,targets);
-
+							  			new_adtag = atfunc.setup(aid_data,new_adtag,adpos,keys,size,req,res);
 								  		new_adtag = atfunc.zones(aid_data,new_adtag,connection,mysqlc,tid);
 										res.writeHead(200,{'Content-type':'text/html'});
 										res.end(new_adtag);
 								    } else { // if aid_data.length > 0
 								    	//send default creative
-								    	console.log(tid + ':17l:Malformed aid_data:' + rows[0].info + ', Writing ad(default)');
+								    	console.log(tid + ':17l:' + aid + ':' + host + ':' + rows[0].info + ':Invalid aid data:Sending Default');
 								    	var new_adtag = atfunc.default_ad(size,basetag);
 										res.writeHead(200,{'Content-type':'text/html'});
 										res.end(new_adtag);

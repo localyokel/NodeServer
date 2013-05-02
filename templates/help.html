@@ -1,0 +1,27 @@
+<html>
+<body>
+<b>Ad Trans Help</b>
+<hr>
+<p>
+Ad Trans captures requests for ads originating from legacy javascript on publisher sites.  Key features are:
+</p>
+<ul>
+<li>Translating from old ad tags to new Adzerk tags</li>
+<li>Injecting zones, ad positions and adzerk site ids into Adzerk tags</li>
+<li>Injecting keywords into Adzerk tags</li>
+<li>Sending passbacks or house ads for non whitelisted domains</li>
+<li>Logging exceptions that are monitored by the monitoring subsystem</li>
+<li>Serving the modified lymads.js script which then calls the adtrans system</li>
+</ul>
+<br/>
+<p>
+Adtrans is configured to NEVER exit if there is an unhandled exception.  That means it can be in a broken state, but still running.  The monitoring script can detect these problems and send notifications.  Generally, if there is a problem, it is enough to restart the adtrans server.  Here are the steps to take:
+<br/>
+<ul>
+<li>cd /srv/node/Adserver</li>
+<li>pkill -9 node</li>
+<li>nohup node at.js > adtrans.log &</li>
+</ul>
+<br/>
+This takes us to the monitoring program which lives in ~/monitor.  monitor.pl reads the adtrans.log file and creates a new file that lists all of the types of exceptions we might see.  The monitor log cycles once a day.  Only the previous day's events are kept.<br/><br/>
+The monitoring logs are kept in /srv/node/Adserver in the monitor.log file.  Another node application, the node log retrieval system, allows the Alerts script which lives on the QA server to pull the log data.

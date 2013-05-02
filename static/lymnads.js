@@ -12,28 +12,41 @@ if (!SizeMap[localyokel_size]) {
 function lym_ads_makeFrame() {
    var localyokel_adsvr_adspace_vAppRoot = "http://NodeBalancer-2000449350.us-west-1.elb.amazonaws.com/a";
    var lym_adsvr_div_id = "adsvr_"+localyokel_adsvr_adspace_id+"_"+Math.floor(Math.random()*999);
-   document.write('<form id="lym_adsvr_makeFrame"><div id="'+ lym_adsvr_div_id +'"></div></form>'); 
-   var referrer;
-   if(self == top) referrer = document.location.href; else referrer = document.referrer;
-   referrer = 'http://accuweather.com/this/is/a/test/ad.html';
+   document.write('<form id="lym_adsvr_makeFrame"><div id="'+ lym_adsvr_div_id +'">'); 
+   var referrer;    
+   if (typeof localyokel_refURL === 'undefined') {
+   		if(self == top) referrer = document.location.href; else localyokel_refURL = document.referrer;
+   		referrer = 'http://accuweather.com/this/is/a/test/ad.html';
+   } else {
+   		referrer = localyokel_refURL;
+   }
    var localyokel_width = lym_adsvr_SplitOnString(0);
    var localyokel_height = lym_adsvr_SplitOnString(1);
    var lym_zone_data = "";
-   ifrm = document.createElement("IFRAME"); 
-   ifrm.setAttribute("src", localyokel_adsvr_adspace_vAppRoot +'?aid=' + localyokel_adsvr_adspace_id + '&keys=' + escape(localyokel_custom) + '&size='+localyokel_sizeid+'&adpos='+lym_adsvr_DetectPosition(lym_adsvr_div_id)+'&ref='+escape(referrer));
-   //ifrm.style.width = localyokel_width +"px"; 
-   //ifrm.style.height = localyokel_height +"px";
-   ifrm.width = localyokel_width;
-   ifrm.height = localyokel_height;
-   ifrm.id=lym_adsvr_div_id+"_iframe";
-   ifrm.frameBorder = "0";
-   ifrm.marginHeight = "0";
-   ifrm.marginWidth = "0";
-   ifrm.topMargin = "0";
-   ifrm.leftMargin = "0";
-   ifrm.scrolling = "no";
-   document.getElementById(lym_adsvr_div_id).appendChild(ifrm);
+
+   var urlcall = localyokel_adsvr_adspace_vAppRoot +'?aid=' + localyokel_adsvr_adspace_id + '&keys=' + escape(localyokel_custom) + '&size='+localyokel_sizeid+'&adpos='+lym_adsvr_DetectPosition(lym_adsvr_div_id)+'&ref='+escape(referrer);
+
+   call_adtrans(urlcall,lym_adsvr_div_id);
 } 
+
+function call_adtrans (urlcall,lym_adsvr_div_id) {
+   var xmlhttp;
+   if (window.XMLHttpRequest) {
+   	 // code for IE7+, Firefox, Chrome, Opera, Safari
+     xmlhttp=new XMLHttpRequest();
+   } else {
+     // code for IE6, IE5
+     xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
+   }
+   xmlhttp.onreadystatechange=function() {
+     if (xmlhttp.readyState==4 && xmlhttp.status==200) {
+     	document.write('<span id="' + lym_adsvr_div_id + '_span" style="white-space:normal;">' + xmlhttp.responseText + '<\/span><\/div><\/form>');
+        //document.getElementById(lym_adsvr_div_id).innerHTML=xmlhttp.responseText;
+     }
+   }
+   xmlhttp.open("GET",urlcall,true);
+   xmlhttp.send();
+}
 
 function lym_adsvr_SplitOnString(pos)
 {	
