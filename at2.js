@@ -161,6 +161,115 @@ ados_addInlinePlacement(5598, _SITEID_, _SIZE_)_SETZONE_.setClickUrl("-optional-
     	});
     });
 
+	app.get('/ad',function(req,res) {
+		var aid 	= req.query.aid;
+        var size    = req.query.size;
+	    var adpos   = req.query.adpos;
+	    var keys    = req.query.keys;
+	    var ref     = req.query.ref;
+	    var type    = req.query.type;
+	    var zc      = req.query.zc;
+	    var mpid	= req.query.mpid;
+	    var garbage = 0;
+
+	    var basetag;
+	    var mimetype = 'text/html';
+	    console.log("TYPE:" + type);
+	    if (type == "iframe") {
+	    	basetag = tag;
+	    } else {
+	    	mimetype = 'text/javascript';
+	    	basetag = 'document.write(\'' + tag + '\');';
+	    }
+
+	    //This is the thread id for logging purposes
+	    var tid = Math.floor(Math.random()*100);
+
+	    if (ref == undefined) {
+	    	ref = 'http://test.localyokelmedia.com';
+	    }
+		var host = ref.replace(/^http:\/\//im,"");
+	    host = host.replace(/^www\./im,"");
+	    host = host.replace(/^([^\/]+).*?$/im,"$1");
+
+	    if (aid == undefined) {
+	    	aid = -1;
+	    }
+	    
+	    var akey;
+
+	    if (aid == -1) {
+	    	akey = mpid + ':' + host + ':' + size;
+	    } else {
+	    	akey = 'aid_' + aid;
+	    }
+
+    	var hkey = "wl_" + host;
+
+    	//first check memcache for akey
+    	connection.get(akey, function(result) {
+    		//if success, check result.data for correct data
+    		if (result.success && result.data) {
+    			var aid_info = result.data.split("::");
+				if (aid_info.length > 4) {
+					$val = "$aid\:\:$azkid\:\:$zc{$aid}\:\:$adpos{$aid}\:\:$host{$sc{$aid}\:\:$passback{$aid}";
+					var aid = aid_info[0];
+					var site_id = aid_info[1];
+					var zone_id = aid_info[2];
+					var dbadpos = aid_info[3];
+					var ahost = aid_info[4];
+					var passback = aid_info[5];
+					if (host == ahost) {
+						//site is whitelisted
+						var new_tag = basetag;
+						new_tag = atfunc.process(new_tag, site_id, zone_id, keys, adpos, dbadpos,size);
+						res.writeHead(200,{'Content-type':mimetype});
+						res.end(new_tag);
+					} else if (passback != undefined) {
+						//send passback
+					} else {
+						//send default
+					}
+				} else {
+					// send default because of bad aidinfo data
+				}
+    		} else {
+    			//check mysql
+    			var query = "SELECT info FROM aidinfo WHERE akey='" + akey + "'";
+    			mysqlc.query(query, function(err, rows, fields) {
+    				if (err || !rows[0]) {
+    					//send default
+    				} else {
+    					var aid_info = rows[0].info.split("::");
+    					if (aid_info.length > 4) {
+							$val = "$aid\:\:$azkid\:\:$zc{$aid}\:\:$adpos{$aid}\:\:$host{$sc{$aid}\:\:$passback{$aid}";
+							var aid = aid_info[0];
+							var site_id = aid_info[1];
+							var zone_id = aid_info[2];
+							var dbadpos = aid_info[3];
+							var ahost = aid_info[4];
+							var passback = aid_info[5];
+							if (host == ahost) {
+								//site is whitelisted
+								var new_tag = basetag;
+								new_tag = atfunc.process(new_tag, site_id, zone_id, keys, adpos, dbadpos, size);
+								res.writeHead(200,{'Content-type':mimetype});
+								res.end(new_tag);
+							} else if (passback != undefined) {
+								//send passback
+							} else {
+								//send default
+							}
+						} else {
+							// send default because of bad aidinfo data
+						}
+					}
+    			});
+    		}
+    	});
+
+    });
+
 
 	app.get('/a',function(req,res) {
 		var aid 	= req.query.aid;
@@ -202,10 +311,10 @@ ados_addInlinePlacement(5598, _SITEID_, _SIZE_)_SETZONE_.setClickUrl("-optional-
 	    if (aid == -1) {
 	    	akey = mpid + ':' + host + ':' + size;
 	    } else {
-	    	akey = 'aid:' + aid;
+	    	akey = 'aid_' + aid;
 	    }
 
-    	var hkey = "WL:" + host;
+    	var hkey = "wl_" + host;
 	    
 	    if (mpid == undefined && (isNaN(aid) || aid == -1)) {
 	  		console.log(tid + ':1:' + aid + ':' + host + '::Invalid aid:Sending Default');
@@ -215,7 +324,7 @@ ados_addInlinePlacement(5598, _SITEID_, _SIZE_)_SETZONE_.setClickUrl("-optional-
 			res.end(new_adtag);
 	    } else {
 	    	//first check to see if it is a whitelisted URL
-	    	if (connection) {
+	    	if (connection) { // do we have a memcache connection
 		    	connection.get(hkey,function(result) {
 		    		if (result.success && result.data) {
 		    			//now check for its memcache aid entry
@@ -241,7 +350,7 @@ ados_addInlinePlacement(5598, _SITEID_, _SIZE_)_SETZONE_.setClickUrl("-optional-
 						  	} else {
 						  		//console.log(tid + ':7:' + aid + ' not found in memcached');
 						  		if (mysql_connected) {
-							  		var query = "SELECT info FROM aidinfo WHERE akey = " + akey;
+							  		var query = "SELECT info FROM aidinfo WHERE akey = '" + akey + "'";
 							  		mysqlc.query(query,function(err,rows,fields) {
 							  			if (err || !rows[0]) {
 							  				console.log(tid + ':8:' + aid + ':' + host + ':' + err + ':aid not found in MySQL or error:Sending Default');
@@ -320,7 +429,7 @@ ados_addInlinePlacement(5598, _SITEID_, _SIZE_)_SETZONE_.setClickUrl("-optional-
 										    } // end if aid_data.length > 0
 									  	} else { // if result.success for connection.get aid
 									  		//console.log(tid + ':15:' + aid + ' not found in memcache');
-									  		var query = "SELECT info FROM aidinfo WHERE akey = " + akey;
+									  		var query = "SELECT info FROM aidinfo WHERE akey = '" + akey + "'";
 									  		mysqlc.query(query,function(err,rows,fields) {
 									  			if (err || !rows[0]) {
 									  				console.log(tid + ':15a:' + aid + ':' + host + ':' + err + ':aid not found in MySQL or error:Sending Default'); 
@@ -357,41 +466,102 @@ ados_addInlinePlacement(5598, _SITEID_, _SIZE_)_SETZONE_.setClickUrl("-optional-
 								    }); // end connection.get aid	
 								} else { // if rows[0] else for mysql whitelist query
 									//not whitelisted for sure...
-									console.log(tid + ':16:' + aid + ':' + host + '::Not whitelisted in MySQL');
-									var pbkey = 'pb_' + aid;
-									connection.get(pbkey, function(result) {
-										if (result.success && result.data) {
-											//console.log(tid + ':16a:Found passback for ' + pbkey + ' in memcached...Writing ad');
-											res.writeHead(200,{'Content-type':'text/html'});
-											res.end(result.data);
+									connection.get(akey,function(result) {
+										if (result.success) {
+											var aid_data = result.data.split(":");
+											aid = aid_data[0];
+
+											console.log(tid + ':16:' + aid + ':' + host + '::Not whitelisted in MySQL');
+											var pbkey = 'pb_' + aid;
+											connection.get(pbkey, function(result) {
+												if (result.success && result.data) {
+													//console.log(tid + ':16a:Found passback for ' + pbkey + ' in memcached...Writing ad');
+													res.writeHead(200,{'Content-type':'text/html'});
+													res.end(result.data);
+												} else {
+													console.log(tid + ':16b:No passback in memcached');
+													var query = 'SELECT ad FROM passbacks WHERE pb_id=\'' + pbkey + '\'';
+													console.log(tid + ':16b:pb_key:' + pbkey);
+													mysqlc.query(query,function(err,rows,fields) {
+														if (err || !rows[0]) {
+															//either we have an error or no results...send default
+															//send default creative
+															console.log(tid + ':16d:' + aid + ':' + host + '::Passback not found in MySQL:Sending Default');
+															var new_adtag = atfunc.default_ad(size,basetag);
+															res.writeHead(200,{'Content-type':'text/html'});
+															res.end(new_adtag);
+														} else {
+															//console.log(tid + ':16c:Found passback for ' + pbkey + ' in MySQL...sending');
+															connection.set(pbkey,rows[0].ad,function(result) {
+																if (result.success) {
+																	//added to memcache
+																} else {
+																	//didn't add to memcache
+																}
+															});
+															//console.log(tid + ':16d:Writing ad');
+															res.writeHead(200,{'Content-type':mimetype});
+															res.end(rows[0].ad);
+														}
+													}); // end mysql query passbacks
+												} // end if result.success pbkey
+											}); // end connection.get pbkey
+
+
 										} else {
-											console.log(tid + ':16b:No passback in memcached');
-											var query = 'SELECT ad FROM passbacks WHERE pb_id=\'' + pbkey + '\'';
-											console.log(tid + ':16b:pb_key:' + pbkey);
+											var query = "SELECT info FROM aidinfo WHERE akey = '" + akey + "'";
 											mysqlc.query(query,function(err,rows,fields) {
 												if (err || !rows[0]) {
-													//either we have an error or no results...send default
-													//send default creative
-													console.log(tid + ':16d:' + aid + ':' + host + '::Passback not found in MySQL:Sending Default');
+													//send default
+													console.log(tid+':17a:' + aid + ':' + host + '::Not whitelisted in MySQL:Sending Default');
 													var new_adtag = atfunc.default_ad(size,basetag);
-													res.writeHead(200,{'Content-type':'text/html'});
-													res.end(new_adtag);
-												} else {
-													//console.log(tid + ':16c:Found passback for ' + pbkey + ' in MySQL...sending');
-													connection.set(pbkey,rows[0].ad,function(result) {
-														if (result.success) {
-															//added to memcache
-														} else {
-															//didn't add to memcache
-														}
-													});
-													//console.log(tid + ':16d:Writing ad');
 													res.writeHead(200,{'Content-type':mimetype});
-													res.end(rows[0].ad);
+													res.end(new_adtag);													
+												} else {
+													var aid_data = rows[0].info.split(":");
+													aid = aid_data[0];
+
+													console.log(tid + ':16:' + aid + ':' + host + '::Not whitelisted in MySQL');
+													var pbkey = 'pb_' + aid;
+													connection.get(pbkey, function(result) {
+														if (result.success && result.data) {
+															//console.log(tid + ':16a:Found passback for ' + pbkey + ' in memcached...Writing ad');
+															res.writeHead(200,{'Content-type':'text/html'});
+															res.end(result.data);
+														} else {
+															console.log(tid + ':16b:No passback in memcached');
+															var query = 'SELECT ad FROM passbacks WHERE pb_id=\'' + pbkey + '\'';
+															console.log(tid + ':16b:pb_key:' + pbkey);
+															mysqlc.query(query,function(err,rows,fields) {
+																if (err || !rows[0]) {
+																	//either we have an error or no results...send default
+																	//send default creative
+																	console.log(tid + ':16d:' + aid + ':' + host + '::Passback not found in MySQL:Sending Default');
+																	var new_adtag = atfunc.default_ad(size,basetag);
+																	res.writeHead(200,{'Content-type':'text/html'});
+																	res.end(new_adtag);
+																} else {
+																	//console.log(tid + ':16c:Found passback for ' + pbkey + ' in MySQL...sending');
+																	connection.set(pbkey,rows[0].ad,function(result) {
+																		if (result.success) {
+																			//added to memcache
+																		} else {
+																			//didn't add to memcache
+																		}
+																	});
+																	//console.log(tid + ':16d:Writing ad');
+																	res.writeHead(200,{'Content-type':mimetype});
+																	res.end(rows[0].ad);
+																}
+															}); // end mysql query passbacks
+														} // end if result.success pbkey
+													}); // end connection.get pbkey
+
 												}
-											}); // end mysql query passbacks
-										} // end if result.success pbkey
-									}); // end connection.get pbkey
+											})
+										}
+									}
+									
 								}  // end if rows[0]
 							}); // end mysql query whitelist
 						} else { // no mysqlc...send default
@@ -408,14 +578,50 @@ ados_addInlinePlacement(5598, _SITEID_, _SIZE_)_SETZONE_.setClickUrl("-optional-
 					var query = 'SELECT flag FROM whitelist WHERE host = \'' + host + '\'';
 					mysqlc.query(query,function(err,rows,fields) {
 						if (err || !rows[0]) {
-							console.log(tid+':17a:' + aid + ':' + host + '::Not whitelisted in MySQL:Sending Default');
-							var new_adtag = atfunc.default_ad(size,basetag);
-							res.writeHead(200,{'Content-type':mimetype});
-							res.end(new_adtag);
+							//hunt for passback
+							var query = "SELECT info FROM aidinfo WHERE akey='" + akey + "'";
+							mysqlc.query(query,function(err,rows,fields) {
+								if (err || !rows[0]) {
+									console.log(tid+':17a:' + aid + ':' + host + '::Not whitelisted in MySQL:Sending Default');
+									var new_adtag = atfunc.default_ad(size,basetag);
+									res.writeHead(200,{'Content-type':mimetype});
+									res.end(new_adtag);
+								} else {
+									aid = rows[0].info.split(":");
+									var pb_key = "pb_" + aid;
+									var query = 'SELECT ad FROM passbacks WHERE pb_id=\'' + pbkey + '\'';
+									console.log(tid + ':16b:pb_key:' + pbkey);
+									mysqlc.query(query,function(err,rows,fields) {
+										if (err || !rows[0]) {
+											//either we have an error or no results...send default
+											//send default creative
+											console.log(tid + ':16d:' + aid + ':' + host + '::Passback not found in MySQL:Sending Default');
+											var new_adtag = atfunc.default_ad(size,basetag);
+											res.writeHead(200,{'Content-type':'text/html'});
+											res.end(new_adtag);
+										} else {
+											//console.log(tid + ':16c:Found passback for ' + pbkey + ' in MySQL...sending');
+											connection.set(pbkey,rows[0].ad,function(result) {
+												if (result.success) {
+													//added to memcache
+												} else {
+													//didn't add to memcache
+												}
+											});
+											//console.log(tid + ':16d:Writing ad');
+											res.writeHead(200,{'Content-type':mimetype});
+											res.end(rows[0].ad);
+										}
+									}); // end mysql query passbacks
+
+
+
+								}
+							})
 						} else {
 							//we have whitelisted site...
 							//console.log(tid + ':17a:Site whitelisted in MySQL');
-							var query = 'SELECT info FROM aidinfo WHERE akey = ' + akey;
+							var query = 'SELECT info FROM aidinfo WHERE akey = \'' + akey + '\'';
 							mysqlc.query(query,function(err,rows,fields) {
 								if (err || !rows[0]) {
 									//send default creative
