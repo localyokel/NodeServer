@@ -18,7 +18,7 @@ if (!SizeMap[localyokel_size]) {
 }
 
 function makeFrame() {
-   var AppRoot = "http://NodeBalancer-2000449350.us-west-1.elb.amazonaws.com/a";
+   var AppRoot = "http://NodeBalancer-2000449350.us-west-1.elb.amazonaws.com/ad";
    var div_id = "adsvr_"+localyokel_adsvr_adspace_id+"_"+Math.floor(Math.random()*999);
    document.write('<form id="makeFrame"><div id="'+ div_id +'"></div></form>'); 
    var referrer;    
@@ -50,7 +50,7 @@ function makeFrame() {
 function makeScript()
 {
 	
-	var AppRoot = "http://NodeBalancer-2000449350.us-west-1.elb.amazonaws.com/a";
+	var AppRoot = "http://NodeBalancer-2000449350.us-west-1.elb.amazonaws.com/ad";
     var localyokel_refURL; 
 	if(self == top) localyokel_refURL = document.location.href; else localyokel_refURL = document.referrer;
     localyokel_custom = localyokel_custom.replace(/"'/m,"");
