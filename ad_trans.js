@@ -191,6 +191,13 @@ ados_addInlinePlacement(5598, _SITEID_, _SIZE_)_SETZONE_.setClickUrl("-optional-
 		var host = ref.replace(/^http:\/\//im,"");
 	    host = host.replace(/^www\./im,"");
 	    host = host.replace(/^([^\/]+).*?$/im,"$1");
+
+	    var full_ref = ref.replace(/^http:\/\//im,"");
+	    full_ref = full_ref.replace(/^www\./,"");
+
+	    //ref_array is used to match host/path patterns for universal tag sites(certain cases)
+	    var ref_array = new Array();
+	    ref_array = full_ref.split("/");
 	    
 	    //akey is the primary key used in memcache and in the mysql aidinfo table.  The 
 	    //value for the akey entry is a string that contains information about the ad unit
@@ -198,8 +205,17 @@ ados_addInlinePlacement(5598, _SITEID_, _SIZE_)_SETZONE_.setClickUrl("-optional-
 	    //an array called aid_info
 	    var akey;
 	    if (aid == undefined && mpid != undefined) {
+	    	if (isNaN(mpid)) {
+	    		mpid = 0;
+	    	}
+	    	if (isNaN(size)) {
+	    		size = 0;
+	    	}
 	    	akey = mpid + ':' + host + ':' + size;
 	    } else {
+	    	if (isNaN(aid)) {
+	    		aid = 0;
+	    	}
 	    	akey = 'aid_' + aid;
 	    }
 
@@ -224,18 +240,28 @@ ados_addInlinePlacement(5598, _SITEID_, _SIZE_)_SETZONE_.setClickUrl("-optional-
     		//if success, check result.data for correct data
     		if (result.success && result.data) {
     			var aid_info = result.data.split("::");
-				if (aid_info.length > 4) {
+				if (aid_info.length > 5) {
 					console.log(aid_info);
-					var aid      = aid_info[0];
-					var mpid     = aid_info[1];
-					var site_id  = aid_info[2];
-					var zone_id  = aid_info[3];
-					var dbadpos  = aid_info[4];
-					var dbsize   = aid_info[5];
-					var ahost    = aid_info[6];
-					var passback = aid_info[7];
+					var aid      = aid_info[0]; //this is the adspace id for the ad
+					var mpid     = aid_info[1]; //this is the media publisher id or usercode or pubusercode
+					var site_id  = aid_info[2]; //it is what it says it is
+					var zone_id  = aid_info[3]; //zone_id(adzerk zone)
+					var dbadpos  = aid_info[4]; //ad position (atf or btf)
+					var dbsize   = aid_info[5]; //size of the ad(6, 5, or 4)
+					var ahost    = aid_info[6]; //host associated with the ad
+					var passback = aid_info[7]; //passback associated with ad
+
+					//just in case adpull didn't clean it up, we clean up ahost
+					ahost = ahost.replace(/^http:\/\//im,"");
+					ahost = ahost.replace(/^www\./im,"");
+					var ahost_array = new Array();
+					ahost_array = ahost.split("/");
+
+					//check to see if the referrer array contains all of the elements of the ahost_array
+					var host_match = atfunc.host_match(ahost_array,ref_array);
+
 					console.log(tid + ':3AID:' + said + ':MPID:' + smpid + ':SIZE:' + size + ':ADPOS:' + adpos + ':KEYS:' + keys);
-					if (host == ahost) {
+					if (host_match) {
 						//site is whitelisted
 						var new_adtag = atfunc.process(basetag, site_id, zone_id, keys, adpos, dbadpos, size, req, res);
 						res.writeHead(200,{'Content-type':mimetype});
@@ -260,7 +286,7 @@ ados_addInlinePlacement(5598, _SITEID_, _SIZE_)_SETZONE_.setClickUrl("-optional-
 			    	res.end(new_adtag);
 				}
     		} else {
-    			//check mysql
+    			//check mysql.  this is essentially same as above...
 	    		console.log(tid + ':4AID:' + said + ':MPID:' + smpid + ':SIZE:' + size + ':ADPOS:' + adpos + ':KEYS:' + keys);
     			if (mysql_connected) {
 	    			var query = "SELECT info FROM aidinfo WHERE akey='" + akey + "'";
@@ -274,7 +300,7 @@ ados_addInlinePlacement(5598, _SITEID_, _SIZE_)_SETZONE_.setClickUrl("-optional-
 					    	res.end(new_adtag);
 	    				} else {
 	    					var aid_info = rows[0].info.split("::");
-	    					if (aid_info.length > 4) {
+	    					if (aid_info.length > 5) {
 								var aid      = aid_info[0];
 								var mpid     = aid_info[1];
 								var site_id  = aid_info[2];
@@ -283,8 +309,16 @@ ados_addInlinePlacement(5598, _SITEID_, _SIZE_)_SETZONE_.setClickUrl("-optional-
 								var dbsize   = aid_info[5];
 								var ahost    = aid_info[6];
 								var passback = aid_info[7];
+
+								ahost = ahost.replace(/^http:\/\//im,"");
+								ahost = ahost.replace(/^www\./im,"");
+								var ahost_array = new Array();
+								ahost_array = ahost.split("/");
+
+								var host_match = atfunc.host_match(ahost_array,ref_array);
+								
 								console.log(tid + ':4a:' + said + ':' + host + ':' + ahost + ':' + site_id + ':' + dbadpos);
-								if (host == ahost) {
+								if (host_match) {
 									//site is whitelisted if referrer and ahost match...always true with universal,  can be false when using aid
 									var new_adtag = atfunc.process(basetag, site_id, zone_id, keys, adpos, dbadpos, size, req, res);
 									res.writeHead(200,{'Content-type':mimetype});
