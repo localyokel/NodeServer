@@ -32,10 +32,10 @@ process.on('uncaughtException', function (err) {
   console.log((new Date).toUTCString() + ' uncaughtException:',err.message);
 });
 
-app.get('/pull_log',function(req,res) {
+app.get('/at',function(req,res) {
   var key = req.query.key;
   if (key == 'attakmule') {
-    fs.readFile('./log/monitor.log',function(error,content) {
+    fs.readFile('./log/ad_trans.log',function(error,content) {
       //console.log('Request for lymuads.js');
       if (error) {
         res.writeHead(200,{'Content-type':'text/html'});
@@ -50,6 +50,27 @@ app.get('/pull_log',function(req,res) {
     res.end();
   }
 });
+
+app.get('/c',function(req,res) {
+  var key = req.query.key;
+  if (key == 'attakmule') {
+    fs.readFile('./log/console.log',function(error,content) {
+      //console.log('Request for lymuads.js');
+      if (error) {
+        res.writeHead(200,{'Content-type':'text/html'});
+        res.end();
+      } else {
+        res.writeHead(200,{'Content-type':'text/html'});
+        res.end(content,'utf-8');
+      }
+    });
+  } else {
+    res.writeHead(200,{'Content-type':'text/html'});
+    res.end();
+  }
+});
+
+
 
 app.get('*', function(req, res){
   res.end('', 404);

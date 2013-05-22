@@ -21,16 +21,20 @@ function makeFrame() {
    var AppRoot = "http://NodeBalancer-2000449350.us-west-1.elb.amazonaws.com/ad";
    var div_id = "adsvr_"+localyokel_adsvr_adspace_id+"_"+Math.floor(Math.random()*999);
    document.write('<form id="makeFrame"><div id="'+ div_id +'"></div></form>'); 
-   var referrer;    
-   if(self == top) referrer = document.location.href; else referrer = document.referrer;
-   referrer = 'http://thebrooklyngame.com';
+   var referrer;
+   if (RefURL == undefined) {  
+   		if(self == top) referrer = window.location.href; else referrer = document.referrer;
+   		referrer = 'http://thebrooklyngame.com';
+   } else {
+   		referrer = RefURL;
+   }
    var localyokel_width = SplitOnString(0);
    var localyokel_height = SplitOnString(1);
    var lym_zone_data = "";
-   localyokel_custom = localyokel_custom.replace(/"'/m,"");
+   localyokel_custom = localyokel_custom.replace(/["']/m,"");
    localyokel_custom = localyokel_custom.replace(/^\s+/,"");
    localyokel_custom = localyokel_custom.replace(/\s+$/,"");
-   localyokel_custom = localyokel_custom.replace(/\s+/m,",");
+   //localyokel_custom = localyokel_custom.replace(/\s+/m,",");
    ifrm = document.createElement("IFRAME"); 
    ifrm.setAttribute("src", AppRoot +'?aid=' + localyokel_adsvr_adspace_id + '&type=iframe&keys=' + escape(localyokel_custom) + '&size='+localyokel_sizeid+'&adpos='+DetectPosition(div_id)+'&ref='+escape(referrer));
    //ifrm.style.width = localyokel_width +"px"; 
@@ -51,14 +55,22 @@ function makeScript()
 {
 	
 	var AppRoot = "http://NodeBalancer-2000449350.us-west-1.elb.amazonaws.com/ad";
-    var localyokel_refURL; 
-	if(self == top) localyokel_refURL = document.location.href; else localyokel_refURL = document.referrer;
-    localyokel_custom = localyokel_custom.replace(/"'/m,"");
+    var referrer;
+    if (RefURL == undefined) {  
+   		if(self == top) referrer = window.location.href; else referrer = document.referrer;
+   		referrer = 'http://thebrooklyngame.com';
+    } else {
+   		referrer = RefURL;
+    }
+    //var localyokel_refURL; 
+	//if(self == top) localyokel_refURL = window.location.href; else localyokel_refURL = document.referrer;
+    
+    localyokel_custom = localyokel_custom.replace(/["']/m,"");
     localyokel_custom = localyokel_custom.replace(/^\s+/,"");
     localyokel_custom = localyokel_custom.replace(/\s+$/,"");
-    localyokel_custom = localyokel_custom.replace(/\s+/m,",");
+    //localyokel_custom = localyokel_custom.replace(/\s+/m,",");
     localyokel_refURL = 'http://thebrooklyngame.com';
-    document.write('<span id="'+div_id+'_span" style="white-space:normal;"><script src="' + AppRoot +'?aid=' + localyokel_adsvr_adspace_id + '&type=js' + '&keys=' + escape(localyokel_custom) + '&size='+localyokel_sizeid+'&adpos='+DetectPosition(div_id)+'&ref='+escape(localyokel_refURL) + '" type="text/javascript"></script></span></div></form>');
+    document.write('<span id="'+div_id+'_span" style="white-space:normal;"><script src="' + AppRoot +'?aid=' + localyokel_adsvr_adspace_id + '&type=js' + '&keys=' + escape(localyokel_custom) + '&size='+localyokel_sizeid+'&adpos='+DetectPosition(div_id)+'&ref='+escape(referrer) + '" type="text/javascript"></script></span></div></form>');
 
 }
 
